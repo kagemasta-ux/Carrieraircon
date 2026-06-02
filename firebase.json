@@ -9,10 +9,7 @@
     "rewrites": [
       {
         "source": "**",
-        "run": {
-          "serviceId": "carrieraircon-service", // 고객님의 Cloud Run 서비스명
-          "region": "asia-east1" // 서비스가 배포된 구글 클라우드 리전
-        }
+        "destination": "/index.html"
       }
     ]
   }
