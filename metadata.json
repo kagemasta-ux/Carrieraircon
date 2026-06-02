@@ -1,0 +1,6 @@
+{
+  "name": "Carrier AC Business Website",
+  "description": "Carrier Air Conditioner professional product catalog, quote request board with non-member password locking, admin notifications, and company info.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
