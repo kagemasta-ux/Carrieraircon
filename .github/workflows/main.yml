@@ -20,8 +20,8 @@ jobs:
         uses: google-github-actions/auth@v2
         with:
           # 아래 주소는 구글 클라우드 보안 시스템에 맞춰 GitHub과 연동하는 표준 통로 주소 포맷입니다.
-          workload_identity_provider: 'projects/carrier-498123/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
-          service_account: 'service_account: 'github-action-1256660290@carrier-498123.iam.gserviceaccount.com'
+          workload_identity_provider: 'projects/carrieraircon/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
+          service_account: 'service_account: 'github-action-1256660290@carrieraircon.iam.gserviceaccount.com'
 
       - name: Install Dependencies & Build
         run: |
