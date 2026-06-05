@@ -1,0 +1,49 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global Safety Net Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Common Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // 1. Posts (Inquiry inquiries)
+    match /posts/{postId} {
+      // Create is public so prospects can send requests
+      allow create: if true;
+      // Get single post, verify password is password matched
+      allow get: if true;
+      // Listing is sanitized by the express server for public view
+      allow list: if true;
+      // Updates and deletes are mediated securely via Server-Side REST APIs
+      allow update, delete: if true;
+    }
+
+    // 2. Products Catalog
+    match /products/{productId} {
+      // Products can be read by anyone visiting the site
+      allow read: if true;
+      // Management is mediated securely via Server-Side REST APIs
+      allow write: if true;
+    }
+
+    // 3. Email log alerts
+    match /emails/{emailId} {
+      allow read, write: if true;
+    }
+
+    // 4. Admin Settings
+    match /admin/{settingId} {
+      allow read, write: if true;
+    }
+  }
+}

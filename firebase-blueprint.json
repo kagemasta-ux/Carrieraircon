@@ -1,0 +1,85 @@
+{
+  "entities": {
+    "Post": {
+      "title": "Post",
+      "description": "Quote requests and inquiry board posts representing client queries",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier of the post" },
+        "category": { "type": "string", "enum": ["quote", "general"], "description": "Type of query: quote or general question" },
+        "title": { "type": "string", "description": "Title of the board post" },
+        "author": { "type": "string", "description": "Name of the submitter" },
+        "content": { "type": "string", "description": "Direct inquiry details or message content" },
+        "contact": { "type": "string", "description": "Contact number provided for verification/response" },
+        "email": { "type": "string", "description": "Sender email address" },
+        "product": { "type": "string", "description": "Associated HVAC product code or name if requested" },
+        "password": { "type": "string", "description": "Passcode to view and manage this specific post without authenticating" },
+        "status": { "type": "string", "enum": ["pending", "reviewing", "completed"], "description": "Current processing status of the ticket" },
+        "createdAt": { "type": "string", "description": "ISO-8601 formatting timestamp of creation" },
+        "replies": { "type": "array", "description": "List of administrative replies responding to this post" }
+      },
+      "required": ["id", "category", "title", "author", "content", "password", "status", "createdAt"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Air conditioner units with detailed technical specs and pricing configuration",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique catalog ID of the product" },
+        "name": { "type": "string", "description": "Friendly commercial name of the unit" },
+        "model": { "type": "string", "description": "SKU model serial code" },
+        "category": { "type": "string", "enum": ["residential", "commercial", "system"], "description": "Product category grouping" },
+        "image": { "type": "string", "description": "Fully qualified background image URL" },
+        "area": { "type": "string", "description": "Target room dimensions/coverage area (e.g. 58.5㎡)" },
+        "efficiency": { "type": "string", "description": "Energy efficiency rank/class (e.g. 1등급)" },
+        "features": { "type": "array", "description": "Key selling points list of strings" },
+        "specs": { "type": "object", "description": "Physical spec definitions like cooling power consumption" },
+        "isPopular": { "type": "boolean", "description": "Whether highlighted in bestseller panel" }
+      },
+      "required": ["id", "name", "model", "category", "image", "area", "efficiency", "features"]
+    },
+    "EmailLog": {
+      "title": "EmailLog",
+      "description": "Receipt of outbound message notifications dispatched through nodemailer/SMTP",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Sender delivery reference signature" },
+        "category": { "type": "string", "description": "Topic tag categorized from the parent post context" },
+        "title": { "type": "string", "description": "Copy of the mail headline" },
+        "author": { "type": "string", "description": "Submitter's title" },
+        "receiver": { "type": "string", "description": "Receiving contact email" },
+        "status": { "type": "string", "description": "Nodemailer success or simulation diagnostics report" },
+        "isMock": { "type": "boolean", "description": "Whether mock simulated delivery or real SMTP transfer" },
+        "timestamp": { "type": "string", "description": "Receipt date" }
+      },
+      "required": ["id", "category", "title", "author", "receiver", "status", "isMock", "timestamp"]
+    },
+    "AdminSettings": {
+      "title": "AdminSettings",
+      "description": "Global administration parameters and access secret passcode",
+      "type": "object",
+      "properties": {
+        "password": { "type": "string", "description": "Global password used to authenticate administrators" }
+      },
+      "required": ["password"]
+    }
+  },
+  "firestore": {
+    "/posts/{postId}": {
+      "schema": "Post",
+      "description": "Admin and user accessible quote query board postings"
+    },
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Carrier air conditioning catalog items"
+    },
+    "/emails/{emailId}": {
+      "schema": "EmailLog",
+      "description": "SMTP message alarm status logging history"
+    },
+    "/admin/settings": {
+      "schema": "AdminSettings",
+      "description": "Secure master access metadata definition document"
+    }
+  }
+}

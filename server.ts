@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
+import { firestoreService } from './firestoreService.js';
 
 dotenv.config();
 
@@ -95,8 +96,11 @@ async function startServer() {
     fs.writeFileSync(productsPath, JSON.stringify(defaultProducts, null, 2));
   }
 
-  // Database helper functions
-  function readPosts(): any[] {
+  // Database helper functions using Firestore with Local Fallback support
+  async function readPosts(): Promise<any[]> {
+    if (firestoreService.isAvailable()) {
+      return await firestoreService.getPosts();
+    }
     try {
       const data = fs.readFileSync(postsPath, 'utf-8');
       return JSON.parse(data);
@@ -105,11 +109,14 @@ async function startServer() {
     }
   }
 
-  function writePosts(posts: any[]) {
+  async function writePosts(posts: any[]) {
     fs.writeFileSync(postsPath, JSON.stringify(posts, null, 2));
   }
 
-  function readEmails(): any[] {
+  async function readEmails(): Promise<any[]> {
+    if (firestoreService.isAvailable()) {
+      return await firestoreService.getEmails();
+    }
     try {
       const data = fs.readFileSync(emailsPath, 'utf-8');
       return JSON.parse(data);
@@ -118,11 +125,14 @@ async function startServer() {
     }
   }
 
-  function writeEmails(emails: any[]) {
+  async function writeEmails(emails: any[]) {
     fs.writeFileSync(emailsPath, JSON.stringify(emails, null, 2));
   }
 
-  function readProducts(): any[] {
+  async function readProducts(): Promise<any[]> {
+    if (firestoreService.isAvailable()) {
+      return await firestoreService.getProducts();
+    }
     try {
       const data = fs.readFileSync(productsPath, 'utf-8');
       return JSON.parse(data);
@@ -131,17 +141,20 @@ async function startServer() {
     }
   }
 
-  function writeProducts(products: any[]) {
+  async function writeProducts(products: any[]) {
     fs.writeFileSync(productsPath, JSON.stringify(products, null, 2));
   }
 
-  // Admin Credentials (Persistent in admin.json)
+  // Admin Credentials (Persistent in admin.json and Firestore)
   const adminCredsPath = path.join(dbDir, 'admin.json');
   if (!fs.existsSync(adminCredsPath)) {
     fs.writeFileSync(adminCredsPath, JSON.stringify({ password: process.env.ADMIN_PASSWORD || 'carrier1234' }, null, 2));
   }
 
-  function getAdminPassword(): string {
+  async function getAdminPassword(): Promise<string> {
+    if (firestoreService.isAvailable()) {
+      return await firestoreService.getAdminPassword(process.env.ADMIN_PASSWORD || 'carrier1234');
+    }
     try {
       const data = fs.readFileSync(adminCredsPath, 'utf-8');
       const json = JSON.parse(data);
@@ -151,8 +164,36 @@ async function startServer() {
     }
   }
 
-  function setAdminPassword(password: string) {
+  async function setAdminPassword(password: string) {
+    if (firestoreService.isAvailable()) {
+      await firestoreService.setAdminPassword(password);
+    }
     fs.writeFileSync(adminCredsPath, JSON.stringify({ password }, null, 2));
+  }
+
+  // Auto-Seeding Trigger on Startup
+  if (firestoreService.isAvailable()) {
+    try {
+      const localPosts = JSON.parse(fs.readFileSync(postsPath, 'utf-8'));
+      const localEmails = JSON.parse(fs.readFileSync(emailsPath, 'utf-8'));
+      const localProducts = JSON.parse(fs.readFileSync(productsPath, 'utf-8'));
+      const localAdminPassword = fs.existsSync(adminCredsPath)
+        ? JSON.parse(fs.readFileSync(adminCredsPath, 'utf-8')).password
+        : (process.env.ADMIN_PASSWORD || 'carrier1234');
+
+      firestoreService.seedData({
+        posts: localPosts,
+        products: localProducts,
+        emails: localEmails,
+        adminPassword: localAdminPassword
+      }).then(() => {
+        console.log('🎉 Firestore automatic database seeding Completed successfully!');
+      }).catch(err => {
+        console.error('❌ Failed seeding Firestore collections:', err);
+      });
+    } catch (e) {
+      console.warn('Could not read local data for seeding:', e);
+    }
   }
 
   const ADMIN_TOKEN = 'token_carrier_admin_987654321_secret';
@@ -164,9 +205,9 @@ async function startServer() {
   };
 
   // 1. GET /api/posts - Get list of board posts (scrubbed contact/content/email for general public)
-  app.get('/api/posts', (req, res) => {
+  app.get('/api/posts', async (req, res) => {
     const isAdmin = getAdminStatus(req);
-    const posts = readPosts();
+    const posts = await readPosts();
 
     const sanitizedPosts = posts.map(p => {
       // If admin, return full post. If not, hide sensitive fields
@@ -197,7 +238,6 @@ async function startServer() {
       return res.status(400).json({ success: false, message: '필수 입력 항목(제목, 작성자, 내용, 비밀번호)이 누락되었습니다.' });
     }
 
-    const posts = readPosts();
     const newPost = {
       id: `post_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
       category: category || 'quote',
@@ -213,8 +253,14 @@ async function startServer() {
       replies: []
     };
 
-    posts.unshift(newPost);
-    writePosts(posts);
+    if (firestoreService.isAvailable()) {
+      await firestoreService.savePost(newPost.id, newPost);
+    }
+    const posts = await readPosts();
+    if (!firestoreService.isAvailable()) {
+      posts.unshift(newPost);
+    }
+    await writePosts(posts);
 
     // E-mail trigger setup
     const smtpHost = process.env.SMTP_HOST;
@@ -276,8 +322,7 @@ ${content}
     }
 
     // Write to email log database
-    const emails = readEmails();
-    emails.unshift({
+    const newEmail = {
       id: `email_${Date.now()}`,
       category,
       title,
@@ -286,20 +331,33 @@ ${content}
       status: emailLogStatus,
       isMock,
       timestamp: new Date().toISOString()
-    });
-    writeEmails(emails);
+    };
+
+    if (firestoreService.isAvailable()) {
+      await firestoreService.saveEmail(newEmail.id, newEmail);
+    }
+    const emails = await readEmails();
+    if (!firestoreService.isAvailable()) {
+      emails.unshift(newEmail);
+    }
+    await writeEmails(emails);
 
     res.json({ success: true, post: newPost, emailStatus: emailLogStatus, isMock });
   });
 
   // 3. POST /api/posts/:id/verify - Verify post password and return full details
-  app.post('/api/posts/:id/verify', (req, res) => {
+  app.post('/api/posts/:id/verify', async (req, res) => {
     const { id } = req.params;
     const { password } = req.body;
     const isAdmin = getAdminStatus(req);
 
-    const posts = readPosts();
-    const post = posts.find(p => p.id === id);
+    let post = null;
+    if (firestoreService.isAvailable()) {
+      post = await firestoreService.getPostById(id);
+    } else {
+      const posts = await readPosts();
+      post = posts.find(p => p.id === id);
+    }
 
     if (!post) {
       return res.status(404).json({ success: false, message: '글을 찾을 수 없습니다.' });
@@ -314,16 +372,17 @@ ${content}
   });
 
   // 4. POST /api/admin/login - Authenticate Admin
-  app.post('/api/admin/login', (req, res) => {
+  app.post('/api/admin/login', async (req, res) => {
     const { password } = req.body;
-    if (password === getAdminPassword()) {
+    const adminPassword = await getAdminPassword();
+    if (password === adminPassword) {
       return res.json({ success: true, token: ADMIN_TOKEN });
     }
     return res.status(401).json({ success: false, message: '비밀번호가 일치하지 않습니다.' });
   });
 
   // 4.1 POST /api/admin/change-password - Change Admin Password (Admin only)
-  app.post('/api/admin/change-password', (req, res) => {
+  app.post('/api/admin/change-password', async (req, res) => {
     const isAdmin = getAdminStatus(req);
     if (!isAdmin) {
       return res.status(401).json({ success: false, message: '관리자 권한이 필요합니다.' });
@@ -332,7 +391,7 @@ ${content}
     if (!password || password.trim().length < 4) {
       return res.status(400).json({ success: false, message: '비밀번호는 최소 4글자 이상이어야 합니다.' });
     }
-    setAdminPassword(password.trim());
+    await setAdminPassword(password.trim());
     res.json({ success: true, message: '비밀번호가 성공적으로 변경되었습니다.' });
   });
 
@@ -343,7 +402,7 @@ ${content}
   });
 
   // 6. POST /api/posts/:id/reply - Admin post reply or change post status
-  app.post('/api/posts/:id/reply', (req, res) => {
+  app.post('/api/posts/:id/reply', async (req, res) => {
     const { id } = req.params;
     const { content, status } = req.body;
     const isAdmin = getAdminStatus(req);
@@ -352,10 +411,15 @@ ${content}
       return res.status(401).json({ success: false, message: '관리자 권한이 필요합니다.' });
     }
 
-    const posts = readPosts();
-    const postIdx = posts.findIndex(p => p.id === id);
+    let post = null;
+    if (firestoreService.isAvailable()) {
+      post = await firestoreService.getPostById(id);
+    } else {
+      const posts = await readPosts();
+      post = posts.find(p => p.id === id);
+    }
 
-    if (postIdx === -1) {
+    if (!post) {
       return res.status(404).json({ success: false, message: '글을 찾을 수 없습니다.' });
     }
 
@@ -366,38 +430,57 @@ ${content}
         content,
         createdAt: new Date().toISOString()
       };
-      if (!posts[postIdx].replies) {
-        posts[postIdx].replies = [];
+      if (!post.replies) {
+        post.replies = [];
       }
-      posts[postIdx].replies.push(newReply);
+      post.replies.push(newReply);
     }
 
     if (status) {
-      posts[postIdx].status = status;
+      post.status = status;
     } else if (content) {
-      posts[postIdx].status = 'completed'; // auto-complete if replied
+      post.status = 'completed'; // auto-complete if replied
     }
 
-    writePosts(posts);
-    res.json({ success: true, post: posts[postIdx] });
+    if (firestoreService.isAvailable()) {
+      await firestoreService.savePost(id, post);
+    }
+    const posts = await readPosts();
+    if (!firestoreService.isAvailable()) {
+      const postIdx = posts.findIndex(p => p.id === id);
+      if (postIdx !== -1) {
+        posts[postIdx] = post;
+      }
+    }
+    await writePosts(posts);
+    res.json({ success: true, post });
   });
 
   // 7. DELETE /api/posts/:id - Delete post (authorized by admin or correct password)
-  app.delete('/api/posts/:id', (req, res) => {
+  app.delete('/api/posts/:id', async (req, res) => {
     const { id } = req.params;
     const { password } = req.body;
     const isAdmin = getAdminStatus(req);
 
-    const posts = readPosts();
-    const post = posts.find(p => p.id === id);
+    let post = null;
+    if (firestoreService.isAvailable()) {
+      post = await firestoreService.getPostById(id);
+    } else {
+      const posts = await readPosts();
+      post = posts.find(p => p.id === id);
+    }
 
     if (!post) {
       return res.status(404).json({ success: false, message: '글을 찾을 수 없습니다.' });
     }
 
     if (isAdmin || post.password === password) {
+      if (firestoreService.isAvailable()) {
+        await firestoreService.deletePost(id);
+      }
+      const posts = await readPosts();
       const filtered = posts.filter(p => p.id !== id);
-      writePosts(filtered);
+      await writePosts(filtered);
       return res.json({ success: true, message: '게시글이 성공적으로 삭제되었습니다.' });
     }
 
@@ -405,23 +488,23 @@ ${content}
   });
 
   // 8. GET /api/admin/emails - Retrieve logs of sent emails
-  app.get('/api/admin/emails', (req, res) => {
+  app.get('/api/admin/emails', async (req, res) => {
     const isAdmin = getAdminStatus(req);
     if (!isAdmin) {
       return res.status(401).json({ success: false, message: '관리자 권한이 필요합니다.' });
     }
-    const emails = readEmails();
+    const emails = await readEmails();
     res.json({ success: true, emails });
   });
 
   // 9. GET /api/products - Get all products from data/products.json
-  app.get('/api/products', (req, res) => {
-    const products = readProducts();
+  app.get('/api/products', async (req, res) => {
+    const products = await readProducts();
     res.json({ success: true, products });
   });
 
   // 10. POST /api/products - Create a new product (admin only)
-  app.post('/api/products', (req, res) => {
+  app.post('/api/products', async (req, res) => {
     const isAdmin = getAdminStatus(req);
     if (!isAdmin) {
       return res.status(401).json({ success: false, message: '관리자 권한이 필요합니다.' });
@@ -432,7 +515,6 @@ ${content}
       return res.status(400).json({ success: false, message: '필수 항목이 누락되었습니다.' });
     }
 
-    const products = readProducts();
     const newProduct = {
       id: `p_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
       name,
@@ -446,13 +528,19 @@ ${content}
       isPopular: !!isPopular
     };
 
-    products.push(newProduct);
-    writeProducts(products);
+    if (firestoreService.isAvailable()) {
+      await firestoreService.saveProduct(newProduct.id, newProduct);
+    }
+    const products = await readProducts();
+    if (!firestoreService.isAvailable()) {
+      products.push(newProduct);
+    }
+    await writeProducts(products);
     res.json({ success: true, product: newProduct });
   });
 
   // 11. PUT /api/products/:id - Update an existing product (admin only)
-  app.put('/api/products/:id', (req, res) => {
+  app.put('/api/products/:id', async (req, res) => {
     const isAdmin = getAdminStatus(req);
     if (!isAdmin) {
       return res.status(401).json({ success: false, message: '관리자 권한이 필요합니다.' });
@@ -461,7 +549,7 @@ ${content}
     const { id } = req.params;
     const { name, model, category, image, area, efficiency, features, specs, isPopular } = req.body;
 
-    const products = readProducts();
+    let products = await readProducts();
     const index = products.findIndex(p => p.id === id);
     if (index === -1) {
       return res.status(404).json({ success: false, message: '제품을 찾을 수 없습니다.' });
@@ -480,32 +568,41 @@ ${content}
       isPopular: isPopular !== undefined ? !!isPopular : products[index].isPopular
     };
 
-    products[index] = updated;
-    writeProducts(products);
+    if (firestoreService.isAvailable()) {
+      await firestoreService.saveProduct(id, updated);
+    }
+    products = await readProducts();
+    if (!firestoreService.isAvailable()) {
+      products[index] = updated;
+    }
+    await writeProducts(products);
     res.json({ success: true, product: updated });
   });
 
   // 12. DELETE /api/products/:id - Delete an existing product (admin only)
-  app.delete('/api/products/:id', (req, res) => {
+  app.delete('/api/products/:id', async (req, res) => {
     const isAdmin = getAdminStatus(req);
     if (!isAdmin) {
       return res.status(401).json({ success: false, message: '관리자 권한이 필요합니다.' });
     }
 
     const { id } = req.params;
-    const products = readProducts();
+    const products = await readProducts();
     const exists = products.some(p => p.id === id);
     if (!exists) {
       return res.status(404).json({ success: false, message: '제품을 찾을 수 없습니다.' });
     }
 
+    if (firestoreService.isAvailable()) {
+      await firestoreService.deleteProduct(id);
+    }
     const filtered = products.filter(p => p.id !== id);
-    writeProducts(filtered);
+    await writeProducts(filtered);
     res.json({ success: true, message: '제품이 성공적으로 삭제되었습니다.' });
   });
 
   // 12.1 POST /api/products/bulk - Bulk create multiple products (admin only)
-  app.post('/api/products/bulk', (req, res) => {
+  app.post('/api/products/bulk', async (req, res) => {
     const isAdmin = getAdminStatus(req);
     if (!isAdmin) {
       return res.status(401).json({ success: false, message: '관리자 권한이 필요합니다.' });
@@ -516,7 +613,7 @@ ${content}
       return res.status(400).json({ success: false, message: '올바르지 않은 데이터 형식입니다.' });
     }
 
-    const currentProducts = readProducts();
+    const currentProducts = await readProducts();
     const processed = bulkProducts.map((p, index) => {
       // Map categories neatly
       let categoryMapped: 'residential' | 'commercial' | 'system' = 'residential';
@@ -558,8 +655,13 @@ ${content}
       return res.status(400).json({ success: false, message: '유효한 제품 데이터(제품명, 모델명 필수)가 누락되었습니다.' });
     }
 
+    if (firestoreService.isAvailable()) {
+      for (const p of validProducts) {
+        await firestoreService.saveProduct(p.id, p);
+      }
+    }
     const updatedList = [...currentProducts, ...validProducts];
-    writeProducts(updatedList);
+    await writeProducts(updatedList);
     res.json({ success: true, count: validProducts.length, products: validProducts });
   });
 
