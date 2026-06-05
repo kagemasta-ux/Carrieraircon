@@ -204,8 +204,22 @@ async function startServer() {
     return token === ADMIN_TOKEN;
   };
 
+  // Helper middleware wrapper to prevent unhandled promise rejections and clean JSON error output
+  const asyncHandler = (fn: (req: express.Request, res: express.Response, next: express.NextFunction) => Promise<any>) => {
+    return (req: express.Request, res: express.Response, next: express.NextFunction) => {
+      fn(req, res, next).catch((err) => {
+        console.error("Express API Error:", req.method, req.path, err);
+        res.status(500).json({
+          success: false,
+          message: '데이터 처리 중 오류가 발생했습니다.',
+          error: err instanceof Error ? err.message : String(err)
+        });
+      });
+    };
+  };
+
   // 1. GET /api/posts - Get list of board posts (scrubbed contact/content/email for general public)
-  app.get('/api/posts', async (req, res) => {
+  app.get('/api/posts', asyncHandler(async (req, res) => {
     const isAdmin = getAdminStatus(req);
     const posts = await readPosts();
 
@@ -228,10 +242,10 @@ async function startServer() {
     });
 
     res.json({ success: true, posts: sanitizedPosts });
-  });
+  }));
 
   // 2. POST /api/posts - Create inquiry / quote request
-  app.post('/api/posts', async (req, res) => {
+  app.post('/api/posts', asyncHandler(async (req, res) => {
     const { category, title, author, content, contact, email, product, password } = req.body;
 
     if (!title || !author || !content || !password) {
@@ -343,10 +357,10 @@ ${content}
     await writeEmails(emails);
 
     res.json({ success: true, post: newPost, emailStatus: emailLogStatus, isMock });
-  });
+  }));
 
   // 3. POST /api/posts/:id/verify - Verify post password and return full details
-  app.post('/api/posts/:id/verify', async (req, res) => {
+  app.post('/api/posts/:id/verify', asyncHandler(async (req, res) => {
     const { id } = req.params;
     const { password } = req.body;
     const isAdmin = getAdminStatus(req);
@@ -369,20 +383,20 @@ ${content}
     }
 
     return res.status(403).json({ success: false, message: '비밀번호가 일치하지 않습니다.' });
-  });
+  }));
 
   // 4. POST /api/admin/login - Authenticate Admin
-  app.post('/api/admin/login', async (req, res) => {
+  app.post('/api/admin/login', asyncHandler(async (req, res) => {
     const { password } = req.body;
     const adminPassword = await getAdminPassword();
     if (password === adminPassword) {
       return res.json({ success: true, token: ADMIN_TOKEN });
     }
     return res.status(401).json({ success: false, message: '비밀번호가 일치하지 않습니다.' });
-  });
+  }));
 
   // 4.1 POST /api/admin/change-password - Change Admin Password (Admin only)
-  app.post('/api/admin/change-password', async (req, res) => {
+  app.post('/api/admin/change-password', asyncHandler(async (req, res) => {
     const isAdmin = getAdminStatus(req);
     if (!isAdmin) {
       return res.status(401).json({ success: false, message: '관리자 권한이 필요합니다.' });
@@ -393,7 +407,7 @@ ${content}
     }
     await setAdminPassword(password.trim());
     res.json({ success: true, message: '비밀번호가 성공적으로 변경되었습니다.' });
-  });
+  }));
 
   // 5. GET /api/admin/check - Verify Admin session
   app.get('/api/admin/check', (req, res) => {
@@ -402,7 +416,7 @@ ${content}
   });
 
   // 6. POST /api/posts/:id/reply - Admin post reply or change post status
-  app.post('/api/posts/:id/reply', async (req, res) => {
+  app.post('/api/posts/:id/reply', asyncHandler(async (req, res) => {
     const { id } = req.params;
     const { content, status } = req.body;
     const isAdmin = getAdminStatus(req);
@@ -454,10 +468,10 @@ ${content}
     }
     await writePosts(posts);
     res.json({ success: true, post });
-  });
+  }));
 
   // 7. DELETE /api/posts/:id - Delete post (authorized by admin or correct password)
-  app.delete('/api/posts/:id', async (req, res) => {
+  app.delete('/api/posts/:id', asyncHandler(async (req, res) => {
     const { id } = req.params;
     const { password } = req.body;
     const isAdmin = getAdminStatus(req);
@@ -485,26 +499,26 @@ ${content}
     }
 
     return res.status(403).json({ success: false, message: '비밀번호가 일치하지 않아 삭제할 수 없습니다.' });
-  });
+  }));
 
   // 8. GET /api/admin/emails - Retrieve logs of sent emails
-  app.get('/api/admin/emails', async (req, res) => {
+  app.get('/api/admin/emails', asyncHandler(async (req, res) => {
     const isAdmin = getAdminStatus(req);
     if (!isAdmin) {
       return res.status(401).json({ success: false, message: '관리자 권한이 필요합니다.' });
     }
     const emails = await readEmails();
     res.json({ success: true, emails });
-  });
+  }));
 
   // 9. GET /api/products - Get all products from data/products.json
-  app.get('/api/products', async (req, res) => {
+  app.get('/api/products', asyncHandler(async (req, res) => {
     const products = await readProducts();
     res.json({ success: true, products });
-  });
+  }));
 
   // 10. POST /api/products - Create a new product (admin only)
-  app.post('/api/products', async (req, res) => {
+  app.post('/api/products', asyncHandler(async (req, res) => {
     const isAdmin = getAdminStatus(req);
     if (!isAdmin) {
       return res.status(401).json({ success: false, message: '관리자 권한이 필요합니다.' });
@@ -537,10 +551,10 @@ ${content}
     }
     await writeProducts(products);
     res.json({ success: true, product: newProduct });
-  });
+  }));
 
   // 11. PUT /api/products/:id - Update an existing product (admin only)
-  app.put('/api/products/:id', async (req, res) => {
+  app.put('/api/products/:id', asyncHandler(async (req, res) => {
     const isAdmin = getAdminStatus(req);
     if (!isAdmin) {
       return res.status(401).json({ success: false, message: '관리자 권한이 필요합니다.' });
@@ -577,10 +591,10 @@ ${content}
     }
     await writeProducts(products);
     res.json({ success: true, product: updated });
-  });
+  }));
 
   // 12. DELETE /api/products/:id - Delete an existing product (admin only)
-  app.delete('/api/products/:id', async (req, res) => {
+  app.delete('/api/products/:id', asyncHandler(async (req, res) => {
     const isAdmin = getAdminStatus(req);
     if (!isAdmin) {
       return res.status(401).json({ success: false, message: '관리자 권한이 필요합니다.' });
@@ -599,10 +613,10 @@ ${content}
     const filtered = products.filter(p => p.id !== id);
     await writeProducts(filtered);
     res.json({ success: true, message: '제품이 성공적으로 삭제되었습니다.' });
-  });
+  }));
 
   // 12.1 POST /api/products/bulk - Bulk create multiple products (admin only)
-  app.post('/api/products/bulk', async (req, res) => {
+  app.post('/api/products/bulk', asyncHandler(async (req, res) => {
     const isAdmin = getAdminStatus(req);
     if (!isAdmin) {
       return res.status(401).json({ success: false, message: '관리자 권한이 필요합니다.' });
@@ -663,7 +677,7 @@ ${content}
     const updatedList = [...currentProducts, ...validProducts];
     await writeProducts(updatedList);
     res.json({ success: true, count: validProducts.length, products: validProducts });
-  });
+  }));
 
   // Handle SPA and static assets
   if (isProd) {
