@@ -33,9 +33,9 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Authorize Docker Push
+      - name: Authenticate Docker
         run: |
-          gcloud auth configure-docker asia-east1-docker.pkg.dev --quiet
+          gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin https://asia-east1-docker.pkg.dev
 
       - name: Build and Push Docker Image
         run: |
