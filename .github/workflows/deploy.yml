@@ -54,6 +54,7 @@ jobs:
 
       - name: Deploy to Firebase Hosting
         run: |
+          mkdir -p dist
           npx firebase-tools deploy --only hosting --project ${{ env.PROJECT_ID }}
 
       - name: Show Cloud Run URL
