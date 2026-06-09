@@ -1,0 +1,64 @@
+name: Build and Deploy to Cloud Run
+
+on:
+  push:
+    branches:
+      - main # Change this to your default branch if different (e.g., master)
+
+env:
+  PROJECT_ID: carrieraircon # Your Google Cloud Project ID
+  SERVICE_NAME: carrieraircon-web # The name you want for your Cloud Run service
+  REGION: asia-northeast3 # Deploy region (Seoul is asia-northeast3, or asia-east1, etc.)
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Google Auth
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }} # Set in GitHub Secrets
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }} # Set in GitHub Secrets
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Authorize Docker Push
+        run: |
+          gcloud auth configure-docker asia-northeast3-docker.pkg.dev --quiet
+
+      - name: Create Artifact Registry Repository (if not exists)
+        run: |
+          gcloud artifacts repositories create carrier-repo \
+            --repository-format=docker \
+            --location=asia-northeast3 \
+            --description="Docker repository for Carrier website" \
+            --quiet || true
+
+      - name: Build and Push Docker Image
+        run: |
+          IMAGE_TAG="asia-northeast3-docker.pkg.dev/${{ env.PROJECT_ID }}/carrier-repo/${{ env.SERVICE_NAME }}:${{ github.sha }}"
+          docker build -t $IMAGE_TAG .
+          docker push $IMAGE_TAG
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+
+      - name: Deploy to Cloud Run
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ${{ env.SERVICE_NAME }}
+          region: ${{ env.REGION }}
+          image: ${{ env.IMAGE_TAG }}
+          flags: '--allow-unauthenticated' # Make the service public
+
+      - name: Show Cloud Run URL
+        run: |
+          echo "Deployment successful!"
