@@ -4,15 +4,21 @@
     "ignore": [
       "firebase.json",
       "**/.*",
-      "**/node_modules/**"
+      "**/node_modules/**",
+      "server.cjs",
+      "server.cjs.map"
     ],
     "rewrites": [
       {
-        "source": "**",
+        "source": "/api/**",
         "run": {
           "serviceId": "carrieraircon-web",
           "region": "asia-east1"
         }
+      },
+      {
+        "source": "**",
+        "destination": "/index.html"
       }
     ]
   }

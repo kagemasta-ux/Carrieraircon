@@ -152,16 +152,29 @@ async function startServer() {
   }
 
   async function getAdminPassword(): Promise<string> {
-    if (firestoreService.isAvailable()) {
-      return await firestoreService.getAdminPassword(process.env.ADMIN_PASSWORD || 'carrier1234');
-    }
+    let localPassword = 'carrier1234';
     try {
-      const data = fs.readFileSync(adminCredsPath, 'utf-8');
-      const json = JSON.parse(data);
-      return json.password || 'carrier1234';
-    } catch {
-      return 'carrier1234';
+      if (fs.existsSync(adminCredsPath)) {
+        const data = fs.readFileSync(adminCredsPath, 'utf-8');
+        const json = JSON.parse(data);
+        localPassword = json.password || 'carrier1234';
+      }
+    } catch (e) {
+      console.error('Error reading local admin.json:', e);
     }
+
+    if (firestoreService.isAvailable()) {
+      try {
+        const firestorePassword = await firestoreService.getAdminPassword(process.env.ADMIN_PASSWORD || localPassword);
+        if (firestorePassword !== localPassword) {
+          console.log(`[Admin Password Sync] Synchronizing Firestore admin password to match local admin.json password: ${localPassword}`);
+          await firestoreService.setAdminPassword(localPassword);
+        }
+      } catch (err) {
+        console.error('[Admin Password Sync] Failed to sync with Firestore:', err);
+      }
+    }
+    return localPassword;
   }
 
   async function setAdminPassword(password: string) {

@@ -52,9 +52,20 @@ jobs:
           image: ${{ env.IMAGE_TAG }}
           flags: '--allow-unauthenticated' # Make the service public
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+
       - name: Deploy to Firebase Hosting
         run: |
-          mkdir -p dist
           npx firebase-tools deploy --only hosting --project ${{ env.PROJECT_ID }}
 
       - name: Show Cloud Run URL
