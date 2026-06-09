@@ -8,7 +8,8 @@ on:
 env:
   PROJECT_ID: carrieraircon # Your Google Cloud Project ID
   SERVICE_NAME: carrieraircon-web # The name you want for your Cloud Run service
-  REGION: asia-northeast3 # Deploy region (Seoul is asia-northeast3, or asia-east1, etc.)
+  REGION: asia-east1 # Deploy region (Taiwan is asia-east1)
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
   deploy:
@@ -26,6 +27,7 @@ jobs:
         id: auth
         uses: google-github-actions/auth@v2
         with:
+          project_id: ${{ env.PROJECT_ID }}
           workload_identity_provider: ${{ secrets.WIF_PROVIDER }} # Set in GitHub Secrets
           service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }} # Set in GitHub Secrets
 
@@ -34,19 +36,11 @@ jobs:
 
       - name: Authorize Docker Push
         run: |
-          gcloud auth configure-docker asia-northeast3-docker.pkg.dev --quiet
-
-      - name: Create Artifact Registry Repository (if not exists)
-        run: |
-          gcloud artifacts repositories create carrier-repo \
-            --repository-format=docker \
-            --location=asia-northeast3 \
-            --description="Docker repository for Carrier website" \
-            --quiet || true
+          gcloud auth configure-docker asia-east1-docker.pkg.dev --quiet
 
       - name: Build and Push Docker Image
         run: |
-          IMAGE_TAG="asia-northeast3-docker.pkg.dev/${{ env.PROJECT_ID }}/carrier-repo/${{ env.SERVICE_NAME }}:${{ github.sha }}"
+          IMAGE_TAG="asia-east1-docker.pkg.dev/${{ env.PROJECT_ID }}/cloud-run-source-deploy/${{ env.SERVICE_NAME }}:${{ github.sha }}"
           docker build -t $IMAGE_TAG .
           docker push $IMAGE_TAG
           echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
