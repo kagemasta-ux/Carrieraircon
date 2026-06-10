@@ -30,6 +30,7 @@ RUN npm ci --omit=dev
 
 # Copy distribution files from builder
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/firebase-applet-config.json ./firebase-applet-config.json
 
 # Expose port and start server
 EXPOSE 3000
