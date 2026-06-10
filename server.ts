@@ -231,6 +231,12 @@ async function startServer() {
     };
   };
 
+  // 0. GET /api/config/kakao - Return dynamic Kakao Map App Key for runtime client loading
+  app.get('/api/config/kakao', asyncHandler(async (req, res) => {
+    const key = process.env.VITE_KAKAO_APP_KEY || process.env.KAKAO_APP_KEY || '';
+    res.json({ success: true, appKey: key });
+  }));
+
   // 1. GET /api/posts - Get list of board posts (scrubbed contact/content/email for general public)
   app.get('/api/posts', asyncHandler(async (req, res) => {
     const isAdmin = getAdminStatus(req);

@@ -15,13 +15,53 @@ declare global {
 
 export function KakaoMap() {
   const mapRef = useRef<HTMLDivElement>(null);
-  const [appKey, setAppKey] = useState<string>(
-    (import.meta as any).env.VITE_KAKAO_APP_KEY || ''
-  );
+  const [appKey, setAppKey] = useState<string>('');
   const [isLoaded, setIsLoaded] = useState(false);
   const [loadError, setLoadError] = useState(false);
+  const [isFetchingKey, setIsFetchingKey] = useState(true);
+
+  // Fetch Kakao App Key dynamically on mount from Express API (provides runtime support on production domains)
+  useEffect(() => {
+    let active = true;
+    const fetchKey = async () => {
+      try {
+        // Fallback to build-time config first
+        const localKey = (import.meta as any).env.VITE_KAKAO_APP_KEY || '';
+        if (localKey) {
+          if (active) {
+            setAppKey(localKey);
+            setIsFetchingKey(false);
+          }
+          return;
+        }
+
+        // Fetch runtime configured key from absolute path / api proxy
+        const res = await fetch('/api/config/kakao');
+        const data = await res.json();
+        if (active) {
+          if (data && data.success && data.appKey) {
+            setAppKey(data.appKey);
+          } else {
+            console.warn('Kakao App Key from server config is empty or missing.');
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching dynamic Kakao App Key:', err);
+      } finally {
+        if (active) {
+          setIsFetchingKey(false);
+        }
+      }
+    };
+    fetchKey();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
+    if (isFetchingKey) return;
+
     if (!appKey) {
       // If there is no Kakao App Key, trigger the placeholder/fallback map view
       setLoadError(true);
@@ -68,7 +108,7 @@ export function KakaoMap() {
       }, 100);
       return () => clearInterval(checkInterval);
     }
-  }, [appKey]);
+  }, [appKey, isFetchingKey]);
 
   useEffect(() => {
     if (!isLoaded || !mapRef.current || !window.kakao || !window.kakao.maps) return;
