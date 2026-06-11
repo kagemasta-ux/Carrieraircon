@@ -144,7 +144,7 @@ export function KakaoMap() {
           <h4 style="margin: 0 0 4px 0; color: #002D62; font-size: 13px; font-weight: 800; text-align: left;">캐리어에어컨 성남총판</h4>
           <p style="margin: 0 0 8px 0; color: #64748b; font-size: 11px; line-height: 1.4; text-align: left;">경기도 성남시 수정구 성남대로 1247 1층</p>
           <div style="font-size: 10px; font-weight: bold; color: #78350f; background: #fef3c7; display: inline-flex; padding: 2px 6px; border-radius: 4px; align-items: center; gap: 4px;">
-            <span>💡 8호선/수인분당선 태평역 6번 출구 앞</span>
+            <span>💡 수인분당선 태평역 6번 출구 앞</span>
           </div>
         </div>
       `;
