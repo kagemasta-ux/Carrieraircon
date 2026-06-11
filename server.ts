@@ -268,11 +268,18 @@ async function startServer() {
     footerAddress: "경기도 성남시 수정구 성남대로 1247, 1층 캐리어에어컨 성남총판",
     footerPhone: "1588-6883",
     footerEmail: "01carrier@hanmail.net",
-    footerDisclaimer: "본 홈페이지는 캐리어에어컨 기기 납품 및 시공 설계 견적 성함을 인계받아 책임 이첩하는 비회원 안심 전산망입니다. 수집된 최소 작성번호는 4자리 본인 매칭 이외의 목적으로 제3자 제공이나 누출이 일체 봉쇄됩니다.",
+    footerDisclaimer: "본 홈페이지는 캐리어에어컨 기기 납품 및 시공 설계 견적 성함을 인계받아 책임 이첩하는 비회원 안심 전산망입니다. 수집된 최소 작성번호는 4자리 본인 매칭 이외의 목적으로 제3자 제공이나 누출 이 일체 봉쇄됩니다.",
     heroTitle: "120년 냉동공조 기술력, \n캐리어에어컨 성남총판",
     heroSub: "법인 및 상업 시설 완벽 특화 최적 설계! 에너지효율은 극한으로 올리고 오차 없는 밀착 시공을 도모합니다.",
     businessRegNo: "120-81-01185",
-    hideProducts: "true"
+    hideProducts: "true",
+    smtpHost: "",
+    smtpPort: "587",
+    smtpUser: "",
+    smtpPass: "",
+    smtpSecure: "false",
+    smtpFrom: "",
+    notificationReceiver: ""
   };
 
   if (!fs.existsSync(siteSettingsPath)) {
@@ -542,12 +549,15 @@ async function startServer() {
     }
     await writePosts(posts);
 
-    // E-mail trigger setup
-    const smtpHost = process.env.SMTP_HOST;
-    const smtpUser = process.env.SMTP_USER;
-    const smtpPass = process.env.SMTP_PASS;
-    const smtpPort = parseInt(process.env.SMTP_PORT || '587');
-    const notificationReceiver = process.env.NOTIFICATION_RECEIVER || '01carrier@hanmail.net';
+    // E-mail trigger setup - combine env and dynamic admin configurations
+    const siteSettings = await readSiteSettings();
+    const smtpHost = process.env.SMTP_HOST || siteSettings.smtpHost || '';
+    const smtpUser = process.env.SMTP_USER || siteSettings.smtpUser || '';
+    const smtpPass = process.env.SMTP_PASS || siteSettings.smtpPass || '';
+    const smtpPort = parseInt(process.env.SMTP_PORT || siteSettings.smtpPort || '587');
+    const smtpSecure = (process.env.SMTP_SECURE || siteSettings.smtpSecure) === 'true';
+    const smtpFrom = process.env.SMTP_FROM || siteSettings.smtpFrom || (smtpUser ? `"Carrier AC Website" <${smtpUser}>` : '');
+    const notificationReceiver = process.env.NOTIFICATION_RECEIVER || siteSettings.notificationReceiver || siteSettings.footerEmail || '01carrier@hanmail.net';
 
     let emailLogStatus = '';
     let isMock = true;
@@ -575,7 +585,7 @@ ${content}
         const transporter = nodemailer.createTransport({
           host: smtpHost,
           port: smtpPort,
-          secure: process.env.SMTP_SECURE === 'true',
+          secure: smtpSecure,
           auth: {
             user: smtpUser,
             pass: smtpPass
@@ -583,7 +593,7 @@ ${content}
         });
 
         await transporter.sendMail({
-          from: process.env.SMTP_FROM || `"Carrier AC Website" <${smtpUser}>`,
+          from: smtpFrom,
           to: notificationReceiver,
           subject: emailSubject,
           text: emailBodyText,

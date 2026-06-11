@@ -394,7 +394,14 @@ export default function App() {
     heroTitle: localStorage.getItem('carrier_setting_heroTitle') || "120년 냉동공조 기술력, \n캐리어에어컨 성남총판",
     heroSub: localStorage.getItem('carrier_setting_heroSub') || "법인 및 상업 시설 완벽 특화 최적 설계! 에너지효율은 극한으로 올리고 오차 없는 밀착 시공을 도모합니다.",
     businessRegNo: localStorage.getItem('carrier_setting_businessRegNo') || "120-81-01185",
-    hideProducts: localStorage.getItem('carrier_setting_hideProducts') === null ? "true" : localStorage.getItem('carrier_setting_hideProducts')
+    hideProducts: localStorage.getItem('carrier_setting_hideProducts') === null ? "true" : localStorage.getItem('carrier_setting_hideProducts'),
+    smtpHost: localStorage.getItem('carrier_setting_smtpHost') || "",
+    smtpPort: localStorage.getItem('carrier_setting_smtpPort') || "587",
+    smtpUser: localStorage.getItem('carrier_setting_smtpUser') || "",
+    smtpPass: localStorage.getItem('carrier_setting_smtpPass') || "",
+    smtpSecure: localStorage.getItem('carrier_setting_smtpSecure') || "false",
+    smtpFrom: localStorage.getItem('carrier_setting_smtpFrom') || "",
+    notificationReceiver: localStorage.getItem('carrier_setting_notificationReceiver') || ""
   });
 
   const [isSavingSettings, setIsSavingSettings] = useState(false);
@@ -2301,6 +2308,99 @@ export default function App() {
                           />
                           <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#002D62]"></div>
                         </label>
+                      </div>
+                    </div>
+
+                    {/* 5. SMTP Real-time Email Notification Settings */}
+                    <div className="space-y-3.5 bg-slate-50/50 p-4 rounded-xl border border-slate-100 md:col-span-2">
+                      <h4 className="font-bold text-slate-700 border-b border-slate-200/60 pb-1.5 flex items-center gap-1.5">
+                        <Mail className="w-4 h-4 text-sky-600" /> 실시간 이메일 알림 설정 (SMTP Mail Alerts)
+                      </h4>
+                      <p className="text-slate-400 text-[11px] mb-2">홈페이지에 신규 문의나 견적 요청이 접수될 때 지정된 이메일로 즉시 발송 알림을 수신하도록 설정합니다.</p>
+                      
+                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-amber-800 text-[11.5px] space-y-1">
+                        <div className="font-bold">⚠️ 실시간 이메일 알림 메일 발송 가이드</div>
+                        <div>현재 SMTP 설정 정보가 비어 있거나 올바르지 않으면 메일이 실제 전송되지 않으며 상단 로그 시스템에 '모의시뮬레이션'으로만 기록됩니다. 메일을 발송하려는 발신자용 계정(네이버, 지메일 등)에 접속하셔서 SMTP 사용 버튼을 클릭하시고 비밀번호란에 일반 비밀번호 대신 <strong>[앱 비밀번호(2차인증용)]</strong>를 꼭 발급받아 등록해 주세요.</div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs pt-1">
+                        <div className="space-y-1">
+                          <label className="block text-slate-500 font-semibold mb-1">SMTP 호스트 (예: smtp.gmail.com / smtp.naver.com)</label>
+                          <input
+                            type="text"
+                            value={siteSettings.smtpHost || ""}
+                            onChange={(e) => updateSiteSettings({ smtpHost: e.target.value })}
+                            className="w-full border border-slate-300 rounded-lg p-2 bg-white text-slate-800 focus:outline-[#002D62]"
+                            placeholder="smtp.gmail.com"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="block text-slate-500 font-semibold mb-1">SMTP 포트 (STARTTLS: 587, SSL: 465)</label>
+                          <input
+                            type="text"
+                            value={siteSettings.smtpPort || "587"}
+                            onChange={(e) => updateSiteSettings({ smtpPort: e.target.value })}
+                            className="w-full border border-slate-300 rounded-lg p-2 bg-white text-slate-800 focus:outline-[#002D62]"
+                            placeholder="587"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="block text-slate-500 font-semibold mb-1">SMTP 사용자 계정 (이메일 주소 전체)</label>
+                          <input
+                            type="email"
+                            value={siteSettings.smtpUser || ""}
+                            onChange={(e) => updateSiteSettings({ smtpUser: e.target.value })}
+                            className="w-full border border-slate-300 rounded-lg p-2 bg-white text-slate-800 focus:outline-[#002D62]"
+                            placeholder="username@gmail.com"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="block text-slate-500 font-semibold mb-1">SMTP 비밀번호 (또는 발급받은 외부인증 앱 비밀번호)</label>
+                          <input
+                            type="password"
+                            value={siteSettings.smtpPass || ""}
+                            onChange={(e) => updateSiteSettings({ smtpPass: e.target.value })}
+                            className="w-full border border-slate-300 rounded-lg p-2 bg-white text-slate-800 focus:outline-[#002D62]"
+                            placeholder="••••••••••••••••"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="block text-slate-500 font-semibold mb-1">알림 수신용 관리자 전용 이메일 (미입력 시 아래의 푸터 대표이메일로 자동 전공)</label>
+                          <input
+                            type="email"
+                            value={siteSettings.notificationReceiver || ""}
+                            onChange={(e) => updateSiteSettings({ notificationReceiver: e.target.value })}
+                            className="w-full border border-slate-300 rounded-lg p-2 bg-white text-slate-800 focus:outline-[#002D62]"
+                            placeholder="01carrier@hanmail.net"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="block text-slate-500 font-semibold mb-1">보안 통신 방식 설정 (SSL 465 사용 여부)</label>
+                          <select
+                            value={siteSettings.smtpSecure || "false"}
+                            onChange={(e) => updateSiteSettings({ smtpSecure: e.target.value })}
+                            className="w-full border border-slate-300 rounded-lg p-2 bg-white text-slate-800 focus:outline-[#002D62]"
+                          >
+                            <option value="false">STARTTLS / 일반 보안 (포트 587 권장)</option>
+                            <option value="true">SSL / 암호화 고도 보안 (포트 465 권장)</option>
+                          </select>
+                        </div>
+
+                        <div className="space-y-1 md:col-span-2">
+                          <label className="block text-slate-500 font-semibold mb-1">메일 전송 시 표시될 발송자 가명칭 (예: "캐리어알림" &lt;sender@domain.com&gt;)</label>
+                          <input
+                            type="text"
+                            value={siteSettings.smtpFrom || ""}
+                            onChange={(e) => updateSiteSettings({ smtpFrom: e.target.value })}
+                            className="w-full border border-slate-300 rounded-lg p-2 bg-white text-slate-800 focus:outline-[#002D62]"
+                            placeholder='"캐리어에어컨 알리미" <sender@domain.com>'
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
