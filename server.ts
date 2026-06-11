@@ -570,7 +570,6 @@ async function startServer() {
 ■ 작성자: ${author}
 ■ 연락처: ${contact || '없음'}
 ■ 이메일: ${email || '없음'}
-■ 관심 상품: ${product || '선택 안 함'}
 
 ■ 제목: ${title}
 ■ 내용:
