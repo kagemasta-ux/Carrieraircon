@@ -1,95 +1,95 @@
 [
   {
     "id": "aer-18",
+    "area": "58.5㎡ (18평형)",
+    "name": "캐리어 에어로 18단 프리미엄 에어컨",
+    "category": "residential",
+    "model": "KCD18-S33B",
     "features": [
       "18단계 맞춤 청정 위속바람",
       "AI 스마트 자동 최적 냉방",
       "UV-C LED 살균 청정 내부 필터"
     ],
-    "category": "residential",
-    "name": "캐리어 에어로 18단 프리미엄 에어컨",
+    "isPopular": true,
+    "image": "/stand.svg",
     "specs": {
       "power": "2.1 kW",
       "cooling": "7.2 kW"
     },
-    "efficiency": "1등급",
-    "image": "https://shopping-phinf.pstatic.net/main_27072973163/27072973163.20210515152345.jpg",
-    "model": "KCD18-S33B",
-    "area": "58.5㎡ (18평형)",
-    "isPopular": true
+    "efficiency": "1등급"
   },
   {
     "id": "clar-06",
-    "image": "https://shopping-phinf.pstatic.net/main_26744820525/26744820525.20210411162351.jpg",
     "specs": {
       "power": "0.65 kW",
       "cooling": "2.3 kW"
     },
-    "efficiency": "3등급",
-    "model": "CSV-A061KL",
-    "area": "18.7㎡ (6평형)",
     "category": "residential",
     "name": "캐리어 클라윈드 초절전 벽걸이형",
+    "image": "/wall.svg",
+    "area": "18.7㎡ (6평형)",
     "features": [
       "셀프 클리닝 자동 건조 시스템",
       "초절전 인버터 기술 탑재",
       "저소음 수면모드 및 습도조절"
-    ]
+    ],
+    "model": "CSV-A061KL",
+    "efficiency": "3등급"
   },
   {
     "id": "com-80",
-    "name": "캐리어 중대형 상업용 인버터 패키지",
     "features": [
       "원거리 급속 서라운드 터보 냉난방",
       "비틀림 방지 기어 및 고강도 날개",
       "에코 친환경 냉매 사용"
     ],
-    "category": "commercial",
     "model": "KCD50-C14B",
-    "area": "165㎡ (50평형)",
     "efficiency": "1등급",
+    "name": "캐리어 중대형 상업용 인버터 패키지",
+    "image": "https://images.unsplash.com/photo-1563720223185-11003d516935?auto=format&fit=crop&q=80&w=400",
+    "area": "165㎡ (50평형)",
     "specs": {
-      "heating": "16.0 kW",
       "power": "4.8 kW",
-      "cooling": "14.5 kW"
+      "cooling": "14.5 kW",
+      "heating": "16.0 kW"
     },
-    "image": "https://images.unsplash.com/photo-1563720223185-11003d516935?auto=format&fit=crop&q=80&w=400"
+    "category": "commercial"
   },
   {
     "id": "multi-v",
     "category": "system",
-    "name": "캐리어 홈멀티 시스템 세트 (실외기 단일형)",
-    "features": [
-      "단 하나의 실외기로 방별 스마트 비례 제어",
-      "스마트 전력 절감 인공지능 컨트롤",
-      "저온 기후 대응 고확장성 압축기 적용"
-    ],
-    "image": "https://images.unsplash.com/photo-1527689368864-3a821dbccc34?auto=format&fit=crop&q=80&w=400",
-    "efficiency": "1등급",
     "specs": {
       "power": "3.2 kW",
       "cooling": "11.0 kW"
     },
+    "area": "각 방별 맞춤 (30평형 이상)",
+    "image": "https://images.unsplash.com/photo-1527689368864-3a821dbccc34?auto=format&fit=crop&q=80&w=400",
+    "name": "캐리어 홈멀티 시스템 세트 (실외기 단일형)",
     "model": "KCD25-M23C",
-    "area": "각 방별 맞춤 (30평형 이상)"
+    "efficiency": "1등급",
+    "features": [
+      "단 하나의 실외기로 방별 스마트 비례 제어",
+      "스마트 전력 절감 인공지능 컨트롤",
+      "저온 기후 대응 고확장성 압축기 적용"
+    ]
   },
   {
     "id": "sys-34",
+    "name": "캐리어 벽걸이 에어컨",
+    "area": "18.7㎡ (6평형)",
+    "category": "residential",
     "features": [
       "셀프 클리닝 자동 건조 시스템",
       "초절전 인버터 기술 탑재",
       "저소음 수면모드 및 자동 위생 케어"
     ],
-    "category": "residential",
-    "name": "캐리어 벽걸이 에어컨",
-    "image": "https://shopping-phinf.pstatic.net/main_26744820525/26744820525.20210411162351.jpg",
-    "efficiency": "1등급",
+    "model": "CSV-A061KL",
+    "isPopular": true,
+    "image": "/wall.svg",
     "specs": {
       "cooling": "2.3 kW",
       "power": "0.65 kW"
     },
-    "area": "18.7㎡ (6평형)",
-    "model": "CSV-A061KL",
-    "isPopular": true
+    "efficiency": "1등급"
   }
 ]
