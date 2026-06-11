@@ -113,6 +113,7 @@ const CARRIER_PRODUCTS: Product[] = [
 export default function App() {
   const [activeTab, setActiveTab] = useState<'home' | 'products' | 'board' | 'about' | 'directions' | 'admin'>('home');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [selectedPreviewImage, setSelectedPreviewImage] = useState<{ src: string; name: string; model: string } | null>(null);
 
   // Board States
   const [posts, setPosts] = useState<any[]>([]);
@@ -1086,16 +1087,24 @@ export default function App() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {products.filter(p => p.isPopular).map(p => (
                     <div key={p.id} className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs hover:shadow-md transition-shadow flex flex-col">
-                      <div className="relative h-48 bg-slate-100 overflow-hidden">
+                      <div 
+                        className="relative h-48 bg-slate-100 overflow-hidden cursor-zoom-in group/img"
+                        onClick={() => setSelectedPreviewImage({ src: p.image, name: p.name, model: p.model })}
+                        title="클릭하여 원본 이미지 크게 보기"
+                      >
                         <img 
                           src={p.image} 
                           alt={p.name} 
-                          className="w-full h-full object-cover" 
+                          className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-500" 
                           referrerPolicy="no-referrer"
                           onError={(e) => {
                             (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&q=80&w=400';
                           }}
                         />
+                        <div className="absolute inset-0 bg-black/35 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-white text-xs font-bold">
+                          <Search className="w-4 h-4" />
+                          <span>원본 크게 보기</span>
+                        </div>
                         <span className="absolute top-3 left-3 bg-[#002D62] text-white text-xs px-2.5 py-1 rounded-full font-bold">인기 기종</span>
                       </div>
                       <div className="p-5 flex-grow flex flex-col justify-between space-y-4">
@@ -1166,16 +1175,24 @@ export default function App() {
               {products.map((p) => (
                 <div key={p.id} className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
                   <div>
-                    <div className="relative h-56 bg-slate-100 overflow-hidden">
+                    <div 
+                      className="relative h-56 bg-slate-100 overflow-hidden cursor-zoom-in group/img"
+                      onClick={() => setSelectedPreviewImage({ src: p.image, name: p.name, model: p.model })}
+                      title="클릭하여 원본 이미지 크게 보기"
+                    >
                       <img 
                         src={p.image} 
                         alt={p.name} 
-                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" 
+                        className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-500" 
                         referrerPolicy="no-referrer"
                         onError={(e) => {
                           (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&q=80&w=400';
                         }}
                       />
+                      <div className="absolute inset-0 bg-black/35 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-white text-xs font-bold">
+                        <Search className="w-4 h-4" />
+                        <span>원본 크게 보기</span>
+                      </div>
                       <span className="absolute top-3 left-3 bg-[#0F3F7A] text-white text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider">
                         {p.category === 'residential' ? '가정용' : p.category === 'commercial' ? '고용량 상업용' : '시스템/멀티'}
                       </span>
@@ -3000,6 +3017,51 @@ export default function App() {
                 내용 확인 완료
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 4.5 Product Image Zoom Modal */}
+      {selectedPreviewImage && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md transition-all duration-300 animate-fade-in"
+          onClick={() => setSelectedPreviewImage(null)}
+        >
+          <div 
+            className="relative max-w-4xl w-full flex flex-col items-center animate-scale-up"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Top Close Bar */}
+            <div className="w-full flex justify-between items-center text-white mb-4">
+              <div className="flex flex-col">
+                <h3 className="text-xl font-bold font-sans tracking-tight">{selectedPreviewImage.name}</h3>
+              </div>
+              <button 
+                onClick={() => setSelectedPreviewImage(null)}
+                className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors cursor-pointer"
+                title="닫기"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Image Container with high contrast backdrop */}
+            <div className="relative w-full aspect-auto max-h-[75vh] flex items-center justify-center bg-slate-900/60 rounded-2xl overflow-hidden border border-white/10 p-4 shadow-2xl">
+              <img 
+                src={selectedPreviewImage.src} 
+                alt={selectedPreviewImage.name} 
+                className="max-h-[70vh] max-w-full object-contain rounded-lg shadow-lg select-none"
+                referrerPolicy="no-referrer"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&q=80&w=400';
+                }}
+              />
+            </div>
+
+            {/* Footer Notice */}
+            <p className="text-xs text-slate-400 mt-4 text-center">
+              💡 마우스로 클릭하거나 배경 영역을 선택하면 본 팝업창이 닫힙니다.
+            </p>
           </div>
         </div>
       )}
