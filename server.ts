@@ -176,19 +176,69 @@ async function startServer() {
       console.error('Error reading local site_settings.json:', e);
     }
 
+    let settings = localSettings;
     if (firestoreService.isAvailable()) {
       try {
-        const firestoreSettings = await firestoreService.getSiteSettings(localSettings);
-        // Force sync back to local settings if firestore was newer
-        if (JSON.stringify(firestoreSettings) !== JSON.stringify(localSettings)) {
-          fs.writeFileSync(siteSettingsPath, JSON.stringify(firestoreSettings, null, 2));
-        }
-        return firestoreSettings;
+        settings = await firestoreService.getSiteSettings(localSettings);
       } catch (err) {
         console.error('Failed to read siteSettings from Firestore:', err);
       }
     }
-    return localSettings;
+
+    // Server-side Migration for Stale Cloud/Local Site Settings
+    let migrated = false;
+    const s = { ...settings };
+
+    if (!s.ceoName || s.ceoName.includes('이기영') || s.ceoName.includes('시공 케어 파트너')) {
+      s.ceoName = defaultSiteSettings.ceoName;
+      migrated = true;
+    }
+    if (!s.aboutIntroText || s.aboutIntroText.includes('공식 파트너입니다') || s.aboutIntroText.includes('정식 공식 파트너')) {
+      s.aboutIntroText = defaultSiteSettings.aboutIntroText;
+      migrated = true;
+    }
+    if (!s.footerPhone || s.footerPhone === '1588-1234') {
+      s.footerPhone = defaultSiteSettings.footerPhone;
+      migrated = true;
+    }
+    if (!s.footerEmail || s.footerEmail === 'kagemasta@gmail.com') {
+      s.footerEmail = defaultSiteSettings.footerEmail;
+      migrated = true;
+    }
+    if (!s.heroTitle || s.heroTitle.includes('캐리어에어컨 파트너') || s.heroTitle.includes('공식 파트너')) {
+      s.heroTitle = defaultSiteSettings.heroTitle;
+      migrated = true;
+    }
+    if (!s.heroSub || s.heroSub.includes('개인사업자')) {
+      s.heroSub = defaultSiteSettings.heroSub;
+      migrated = true;
+    }
+    if (!s.businessRegNo || s.businessRegNo.includes('XXXXX') || s.businessRegNo === '120-81-XXXXX') {
+      s.businessRegNo = defaultSiteSettings.businessRegNo;
+      migrated = true;
+    }
+
+    if (migrated) {
+      console.log('Migrating site settings to updated values on the server and syncing with database...');
+      await writeSiteSettings(s);
+      settings = s;
+    } else {
+      // Force sync back to local settings if firestore had local difference but no migration was needed
+      try {
+        if (fs.existsSync(siteSettingsPath)) {
+          const fileData = fs.readFileSync(siteSettingsPath, 'utf-8');
+          if (JSON.stringify(settings) !== fileData) {
+            fs.writeFileSync(siteSettingsPath, JSON.stringify(settings, null, 2));
+          }
+        } else {
+          fs.writeFileSync(siteSettingsPath, JSON.stringify(settings, null, 2));
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    return settings;
   }
 
   async function writeSiteSettings(settings: any) {
@@ -383,7 +433,7 @@ async function startServer() {
     const smtpUser = process.env.SMTP_USER;
     const smtpPass = process.env.SMTP_PASS;
     const smtpPort = parseInt(process.env.SMTP_PORT || '587');
-    const notificationReceiver = process.env.NOTIFICATION_RECEIVER || 'kagemasta@gmail.com';
+    const notificationReceiver = process.env.NOTIFICATION_RECEIVER || '01carrier@hanmail.net';
 
     let emailLogStatus = '';
     let isMock = true;
