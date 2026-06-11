@@ -134,6 +134,30 @@ export const firestoreService = {
     }
   },
 
+  async getSiteSettings(defaultSettings: any): Promise<any> {
+    if (!this.isAvailable()) return defaultSettings;
+    try {
+      const docRef = doc(db, 'admin', 'siteSettings');
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        return { ...defaultSettings, ...docSnap.data() };
+      }
+      return defaultSettings;
+    } catch (err) {
+      handleFirestoreError(err, OperationType.GET, 'admin/siteSettings');
+    }
+  },
+
+  async setSiteSettings(settings: any): Promise<void> {
+    if (!this.isAvailable()) return;
+    try {
+      const docRef = doc(db, 'admin', 'siteSettings');
+      await setDoc(docRef, settings, { merge: true });
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, 'admin/siteSettings');
+    }
+  },
+
   async getPosts(): Promise<any[]> {
     if (!this.isAvailable()) return [];
     try {

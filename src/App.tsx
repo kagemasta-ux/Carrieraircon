@@ -384,24 +384,113 @@ export default function App() {
   // Site settings state for editable texts (Aesthetic & general message persistence)
   const [siteSettings, setSiteSettings] = useState({
     logoUrl: localStorage.getItem('carrier_setting_logoUrl') || "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/Carrier_logo.svg/320px-Carrier_logo.svg.png",
-    ceoName: localStorage.getItem('carrier_setting_ceoName') || "캐리어에어컨 시공 케어 파트너 / 이기영 대표",
-    aboutIntroText: localStorage.getItem('carrier_setting_aboutIntroText') || "인류 최초 에어컨 발명자 윌리스 캐리어의 후속 120년 정통 공조 기술 명망을 닻삼아, 한 치 거짓 없는 규격 동자재와 최선 선진 연산 치수로 완벽 시공을 사명으로 실천하는 정식 공식 파트너입니다.",
+    ceoName: localStorage.getItem('carrier_setting_ceoName') || "캐리어에어컨 성남총판 / 안영원 대표",
+    aboutIntroText: localStorage.getItem('carrier_setting_aboutIntroText') || "인류 최초 에어컨 발명자 윌리스 캐리어의 후속 120년 정통 공조 기술 명망을 닻삼아, 한 치 거짓 없는 규격 동자재와 최선 선진 연산 치수로 완벽 시공을 사명으로 실천하는 정직한 캐리어에어컨 성남총판입니다.",
     footerAddress: localStorage.getItem('carrier_setting_footerAddress') || "경기도 성남시 수정구 성남대로 1247, 1층 캐리어에어컨 성남총판",
-    footerPhone: localStorage.getItem('carrier_setting_footerPhone') || "1588-1234",
-    footerEmail: localStorage.getItem('carrier_setting_footerEmail') || "kagemasta@gmail.com",
+    footerPhone: localStorage.getItem('carrier_setting_footerPhone') || "1588-6883",
+    footerEmail: localStorage.getItem('carrier_setting_footerEmail') || "01carrier@hanmail.net",
     footerDisclaimer: localStorage.getItem('carrier_setting_footerDisclaimer') || "본 홈페이지는 캐리어에어컨 기기 납품 및 시공 설계 견적 성함을 인계받아 책임 이첩하는 비회원 안심 전산망입니다. 수집된 최소 작성번호는 4자리 본인 매칭 이외의 목적으로 제3자 제공이나 누출이 일체 봉쇄됩니다.",
-    heroTitle: localStorage.getItem('carrier_setting_heroTitle') || "120년 냉동공조 기술력, \n캐리어에어컨 파트너",
-    heroSub: localStorage.getItem('carrier_setting_heroSub') || "개인사업자 및 상업 시설 완벽 특화 최적 설계! 에너지효율은 극한으로 올리고 오차 없는 밀착 시공을 도모합니다.",
+    heroTitle: localStorage.getItem('carrier_setting_heroTitle') || "120년 냉동공조 기술력, \n캐리어에어컨 성남총판",
+    heroSub: localStorage.getItem('carrier_setting_heroSub') || "법인 및 상업 시설 완벽 특화 최적 설계! 에너지효율은 극한으로 올리고 오차 없는 밀착 시공을 도모합니다.",
+    businessRegNo: localStorage.getItem('carrier_setting_businessRegNo') || "120-81-01185",
     hideProducts: localStorage.getItem('carrier_setting_hideProducts') === null ? "true" : localStorage.getItem('carrier_setting_hideProducts')
   });
+
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [settingsSaveMessage, setSettingsSaveMessage] = useState('');
+
+  const fetchSiteSettings = async () => {
+    try {
+      const res = await fetch('/api/site-settings');
+      const data = await res.json();
+      if (data.success && data.settings) {
+        setSiteSettings(data.settings);
+        Object.entries(data.settings).forEach(([key, value]) => {
+          localStorage.setItem(`carrier_setting_${key}`, String(value));
+        });
+      }
+    } catch (err) {
+      console.error('Failed to load site settings from backend', err);
+    }
+  };
 
   const updateSiteSettings = (newSettings: Partial<typeof siteSettings>) => {
     const updated = { ...siteSettings, ...newSettings };
     setSiteSettings(updated);
+    setSettingsSaveMessage('');
     Object.entries(newSettings).forEach(([key, value]) => {
       localStorage.setItem(`carrier_setting_${key}`, String(value));
     });
   };
+
+  const saveSiteSettingsToServer = async () => {
+    setIsSavingSettings(true);
+    setSettingsSaveMessage('');
+    try {
+      const res = await fetch('/api/site-settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Token': adminToken || ''
+        },
+        body: JSON.stringify(siteSettings)
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSettingsSaveMessage('✓ 사이트 설정 정보가 성공적으로 서버와 데이터베이스에 영구 저장 및 동기화되었습니다!');
+      } else {
+        setSettingsSaveMessage(`❌ 저장 실패: ${data.message || '오류가 발생했습니다.'}`);
+      }
+    } catch (err) {
+      console.error(err);
+      setSettingsSaveMessage('❌ 서버 연결 실패. 네트워크 연결을 확인하세요.');
+    } finally {
+      setIsSavingSettings(false);
+    }
+  };
+
+  // Migrate old browser localStorage values to new defaults automagically
+  useEffect(() => {
+    const oldCeo = localStorage.getItem('carrier_setting_ceoName');
+    const oldIntro = localStorage.getItem('carrier_setting_aboutIntroText');
+    const oldPhone = localStorage.getItem('carrier_setting_footerPhone');
+    const oldEmail = localStorage.getItem('carrier_setting_footerEmail');
+    const oldHeroTitle = localStorage.getItem('carrier_setting_heroTitle');
+
+    let needsUpdate = false;
+    const updates: Partial<typeof siteSettings> = {};
+
+    if (!oldCeo || oldCeo.includes('이기영') || oldCeo.includes('시공 케어 파트너')) {
+      updates.ceoName = "캐리어에어컨 성남총판 / 안영원 대표";
+      needsUpdate = true;
+    }
+    if (!oldIntro || oldIntro.includes('정식 공식 파트너입니다') || oldIntro.includes('공식 파트너')) {
+      updates.aboutIntroText = "인류 최초 에어컨 발명자 윌리스 캐리어의 후속 120년 정통 공조 기술 명망을 닻삼아, 한 치 거짓 없는 규격 동자재와 최선 선진 연산 치수로 완벽 시공을 사명으로 실천하는 정직한 캐리어에어컨 성남총판입니다.";
+      needsUpdate = true;
+    }
+    if (!oldPhone || oldPhone === '1588-1234') {
+      updates.footerPhone = "1588-6883";
+      needsUpdate = true;
+    }
+    if (!oldEmail || oldEmail === 'kagemasta@gmail.com') {
+      updates.footerEmail = "01carrier@hanmail.net";
+      needsUpdate = true;
+    }
+    if (!oldHeroTitle || oldHeroTitle.includes('캐리어에어컨 파트너') || oldHeroTitle.includes('공식 파트너')) {
+      updates.heroTitle = "120년 냉동공조 기술력, \n캐리어에어컨 성남총판";
+      needsUpdate = true;
+    }
+
+    if (needsUpdate) {
+      setSiteSettings(prev => {
+        const u = { ...prev, ...updates };
+        Object.entries(updates).forEach(([k, v]) => {
+          localStorage.setItem(`carrier_setting_${k}`, String(v));
+        });
+        return u;
+      });
+    }
+  }, []);
 
 
 
@@ -425,6 +514,7 @@ export default function App() {
 
   // Load posts and products on mount
   useEffect(() => {
+    fetchSiteSettings();
     fetchPosts();
     fetchProducts();
     if (adminToken) {
@@ -1344,7 +1434,7 @@ export default function App() {
                             <div key={reply.id} className="bg-[#002D62]/5 p-4 rounded-xl border border-[#002D62]/10 space-y-2">
                               <div className="flex items-center justify-between text-xs">
                                 <span className="font-bold text-[#002D62] flex items-center gap-1">
-                                  <Snowflake className="w-3.5 h-3.5 text-[#002D62]" /> 캐리어 공인 공식 파트너 대표마스터
+                                  <Snowflake className="w-3.5 h-3.5 text-[#002D62]" /> 캐리어에어컨 성남총판 대표마스터
                                 </span>
                                 <span className="text-slate-400">
                                   {new Date(reply.createdAt).toLocaleDateString('ko-KR')}
@@ -1582,71 +1672,52 @@ export default function App() {
         {activeTab === 'about' && (
           <div id="about_view_container" className="max-w-7xl mx-auto px-4 py-12 sm:px-6 lg:px-8 animate-fade-in space-y-12">
             
-            {/* Visual Intro banner */}
-            <div className="bg-gradient-to-br from-[#002D62] to-[#0F3F7A] text-white p-8 md:p-12 rounded-3xl space-y-4 relative overflow-hidden">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(56,189,248,0.15),transparent_40%)]"></div>
-              <div className="max-w-xl space-y-3 relative z-10">
-                <span className="text-xs uppercase font-extrabold text-sky-300 bg-white/10 px-2.5 py-1 rounded">정직한 기술 철학</span>
-                <h1 className="text-2.5xl md:text-3.5xl font-black tracking-tight leading-tight">캐리어에어컨 냉난방 공조 케어 솔루션</h1>
-                <p className="text-slate-200 text-sm leading-relaxed whitespace-pre-line">
-                  {siteSettings.aboutIntroText}
-                </p>
-              </div>
-            </div>
-
-            {/* Owner introduction table details */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch pt-4">
               
-              <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-5">
-                <h2 className="text-lg font-bold text-[#002D62] border-b border-slate-100 pb-2 flex items-center gap-2">
-                  <Building className="w-5 h-5 text-sky-600" /> 공식 파트너 사업자 개요
-                </h2>
+              {/* 회사 소개 (좌측) */}
+              <div className="lg:col-span-7 bg-gradient-to-br from-[#002D62] to-[#0F3F7A] text-white p-8 md:p-10 rounded-2xl flex flex-col justify-between relative overflow-hidden shadow-xs">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(56,189,248,0.15),transparent_40%)]"></div>
+                <div className="space-y-4 relative z-10">
+                  <span className="text-xs uppercase font-extrabold text-sky-300 bg-white/10 px-2.5 py-1 rounded inline-block">회사 소개</span>
+                  <h1 className="text-2.5xl font-black tracking-tight leading-tight">캐리어에어컨 냉난방 공조 케어 솔루션</h1>
+                  <p className="text-slate-100 text-sm leading-relaxed whitespace-pre-line">
+                    {siteSettings.aboutIntroText}
+                  </p>
+                </div>
+              </div>
 
-                <div className="grid grid-cols-1 gap-3.5 text-xs">
-                  <div className="flex border-b border-slate-100 pb-2">
-                    <span className="w-28 text-slate-400 font-bold">상호명 / 대표</span>
-                    <span className="text-slate-800 font-bold">{siteSettings.ceoName}</span>
-                  </div>
-                  <div className="flex border-b border-slate-100 pb-2">
-                    <span className="w-28 text-slate-400 font-bold">사업자등록번호</span>
-                    <span className="text-slate-800 font-medium">120-81-XXXXX [개인 일반과세자]</span>
-                  </div>
-                  <div className="flex border-b border-slate-100 pb-2">
-                    <span className="w-28 text-slate-400 font-bold">시공 전담 라이센스</span>
-                    <span className="text-slate-800 font-medium">건설산업기본법에 의한 기계설비가스공사업 시공 자격인 등록</span>
-                  </div>
-                  <div className="flex border-b border-slate-100 pb-2">
-                    <span className="w-28 text-slate-400 font-bold">전화번호</span>
-                    <a href={`tel:${siteSettings.footerPhone}`} className="text-[#002D62] font-bold hover:underline">
-                      {siteSettings.footerPhone} (업무용 직통 유선)
-                    </a>
-                  </div>
-                  <div className="flex">
-                    <span className="w-28 text-slate-400 font-bold">주요 공용 업무</span>
-                    <span className="text-slate-800 font-medium leading-relaxed">
-                      가정 멀티 에어컨 대리점 출고, 시스템 세트 부하 기획, 빌딩형 대용량 멀티 공조 배관설계, 유지 전송 A/S 점검
-                    </span>
+              {/* 사업자 개요 (우측) */}
+              <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200 p-8 space-y-6 flex flex-col justify-between shadow-xs">
+                <div>
+                  <h2 className="text-lg font-bold text-[#002D62] border-b border-slate-100 pb-3 flex items-center gap-2">
+                    <Building className="w-5 h-5 text-sky-600" /> 캐리어에어컨 성남총판 사업자 개요
+                  </h2>
+
+                  <div className="grid grid-cols-1 gap-4 text-xs pt-3">
+                    <div className="flex border-b border-slate-100 pb-3">
+                      <span className="w-28 text-slate-400 font-bold">상호명 / 대표</span>
+                      <span className="text-slate-800 font-bold">{siteSettings.ceoName}</span>
+                    </div>
+                    <div className="flex border-b border-slate-100 pb-3">
+                      <span className="w-28 text-slate-400 font-bold">사업자등록번호</span>
+                      <span className="text-slate-800 font-extrabold tracking-wide">{siteSettings.businessRegNo}</span>
+                    </div>
+                    <div className="flex border-b border-slate-100 pb-3">
+                      <span className="w-28 text-slate-400 font-bold">전화번호</span>
+                      <a href={`tel:${siteSettings.footerPhone}`} className="text-[#002D62] font-bold hover:underline">
+                        {siteSettings.footerPhone} (업무용 직통 유선)
+                      </a>
+                    </div>
+                    <div className="flex pt-1">
+                      <span className="w-28 text-slate-400 font-bold">주요 공용 업무</span>
+                      <span className="text-slate-800 font-medium leading-relaxed">
+                        가정 멀티 에어컨 대리점 출고, 시스템 세트 부하 기획, 빌딩형 대용량 멀티 공조 배관설계, 유지 전송 A/S 점검
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-gradient-to-br from-[#0F3F7A]/5 to-indigo-500/5 p-6 rounded-xl border border-[#0F3F7A]/10 space-y-5">
-                <h2 className="text-lg font-bold text-[#002D62]">보증되는 마스터 안전 시공 원칙</h2>
-                <div className="space-y-4 text-xs text-slate-600">
-                  <div className="flex items-start gap-2.5">
-                    <div className="w-5 h-5 rounded-full bg-[#002D62] text-white flex items-center justify-center font-bold text-[10px] flex-shrink-0 mt-0.5">1</div>
-                    <p className="leading-relaxed"><span className="font-bold text-slate-900 block mb-0.5">철저한 고진공 질소 누설 검사</span> 배관 누기율 제로화를 완수하기 위해 단순 진공이 아닌 전자 마노미터를 이용한 정수 진공 및 질소 가압 검사를 완전 정직하게 필합니다.</p>
-                  </div>
-                  <div className="flex items-start gap-2.5">
-                    <div className="w-5 h-5 rounded-full bg-[#002D62] text-white flex items-center justify-center font-bold text-[10px] flex-shrink-0 mt-0.5">2</div>
-                    <p className="leading-relaxed"><span className="font-bold text-slate-900 block mb-0.5">전 자재 정규 규격 보완 마감</span> 규격보다 얇거나 알루미늄이 절반 이상 섞인 변칙 구리선 배관을 일체 사용 금하고 오직 KS인증 고순도 동관과 자가 소화성 난연 보온 마감재만 선택합니다.</p>
-                  </div>
-                  <div className="flex items-start gap-2.5">
-                    <div className="w-5 h-5 rounded-full bg-[#002D62] text-white flex items-center justify-center font-bold text-[10px] flex-shrink-0 mt-0.5">3</div>
-                    <p className="leading-relaxed"><span className="font-bold text-slate-900 block mb-0.5">실명 명찰 사후 정격 서명</span> 설치가 마감되면 실외기 우측 부위에 작업 일자, 배관 길이, 충진 냉매량, 검수 테스터명을 정확하게 서명 부착하여 평생 신뢰 전산 마스터 관리를 약속합니다.</p>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         )}
@@ -2108,6 +2179,16 @@ export default function App() {
                       </div>
 
                       <div className="space-y-1">
+                        <label className="block text-slate-500 font-semibold mb-1">사업자등록번호 전체 (구분자 포함)</label>
+                        <input
+                          type="text"
+                          value={siteSettings.businessRegNo}
+                          onChange={(e) => updateSiteSettings({ businessRegNo: e.target.value })}
+                          className="w-full border border-slate-300 rounded-lg p-2 bg-white text-slate-800 focus:outline-[#002D62]"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
                         <label className="block text-slate-500 font-semibold mb-1">회사 소개 탭 - 정직한 공조 기술철학 소개 본문 (\n 입력 시 줄바꿈)</label>
                         <textarea
                           value={siteSettings.aboutIntroText}
@@ -2190,10 +2271,32 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div className="flex justify-end pt-2">
-                    <span className="text-emerald-600 font-bold text-xs flex items-center gap-1 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100">
-                      ✓ 변경 사항이 즉시 데이터베이스 및 실시간 화면에 반영 및 저장되었습니다.
-                    </span>
+                  <div className="flex flex-col md:flex-row items-center justify-between gap-3 pt-2">
+                    <div className="text-left">
+                      {settingsSaveMessage ? (
+                        <span className={`font-bold text-xs flex items-center gap-1 px-3 py-1.5 rounded-lg border ${settingsSaveMessage.startsWith('❌') ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
+                          {settingsSaveMessage}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 text-[11px]">
+                          * 정보 수정 완료 후 반드시 우측 [사이트 정보 저장 및 클라우드 동기화] 버튼을 클릭하셔야 다른 기기나 외부 접속 환경에서도 변경된 정보가 영구적으로 보존 및 적용됩니다.
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={saveSiteSettingsToServer}
+                      disabled={isSavingSettings}
+                      className="px-5 py-2.5 bg-[#00DDA4] hover:bg-[#00DDA4]/95 disabled:bg-[#00DDA4]/50 text-slate-900 font-extrabold text-xs rounded-lg transition-all shrink-0 flex items-center gap-1.5 shadow-sm cursor-pointer"
+                    >
+                      {isSavingSettings ? (
+                        <>
+                          <div className="w-3.5 h-3.5 border-2 border-slate-900 border-t-transparent rounded-full animate-spin"></div>
+                          저장하는 중...
+                        </>
+                      ) : (
+                        <>사이트 정보 저장 및 클라우드 동기화</>
+                      )}
+                    </button>
                   </div>
                 </div>
               )}
@@ -2885,7 +2988,7 @@ export default function App() {
               <span className="text-lg font-black tracking-widest text-[#00DDA4]">캐리어에어컨 성남총판</span>
             </div>
             <p className="text-[11px] leading-relaxed text-slate-500 max-w-sm">
-              캐리어에어컨 개인사업자 공식시공 파트너. 서울/경기 전 지사 배송, 자격보증 소지 전문 엔지니어가 책임 하에 완수하는 정직 공학 시공 전담소.
+              캐리어에어컨 성남총판. 서울/경기 전 지사 배송, 전문 엔지니어가 책임 하에 완수하는 정직 공학 시공 전담소.
             </p>
           </div>
 
