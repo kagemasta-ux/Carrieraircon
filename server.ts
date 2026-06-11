@@ -40,7 +40,7 @@ async function startServer() {
         name: '캐리어 에어로 18단 프리미엄 에어컨',
         model: 'KCD18-S33B',
         category: 'residential',
-        image: '/stand.svg',
+        image: '/stand.jpg',
         area: '58.5㎡ (18평형)',
         efficiency: '1등급',
         features: ['18단계 맞춤 청정 위속바람', 'AI 스마트 자동 최적 냉방', 'UV-C LED 살균 청정 내부 필터'],
@@ -52,7 +52,7 @@ async function startServer() {
         name: '캐리어 클라윈드 초절전 벽걸이형',
         model: 'CSV-A061KL',
         category: 'residential',
-        image: '/wall.svg',
+        image: '/wall.jpg',
         area: '18.7㎡ (6평형)',
         efficiency: '3등급',
         features: ['셀프 클리닝 자동 건조 시스템', '초절전 인버터 기술 탑재', '저소음 수면모드 및 습도조절'],
@@ -63,7 +63,7 @@ async function startServer() {
         name: '캐리어 벽걸이 에어컨',
         model: 'CSV-A061KL',
         category: 'residential',
-        image: '/wall.svg',
+        image: '/wall.jpg',
         area: '18.7㎡ (6평형)',
         efficiency: '1등급',
         features: ['셀프 클리닝 자동 건조 시스템', '초절전 인버터 기술 탑재', '저소음 수면모드 및 자동 위생 케어'],
@@ -172,7 +172,7 @@ async function startServer() {
         const targetName = '캐리어 벽걸이 에어컨';
         const targetModel = 'CSV-A061KL';
         const targetCategory = 'residential';
-        const targetImg = '/wall.svg';
+        const targetImg = '/wall.jpg';
         const targetArea = '18.7㎡ (6평형)';
         if (p.name !== targetName || p.model !== targetModel || p.category !== targetCategory || p.image !== targetImg || p.area !== targetArea) {
           dirty = true;
@@ -194,7 +194,7 @@ async function startServer() {
           };
         }
       } else if (p.id === 'clar-06') {
-        const targetImg = '/wall.svg';
+        const targetImg = '/wall.jpg';
         if (p.image !== targetImg) {
           dirty = true;
           updatedProd = {
@@ -203,7 +203,7 @@ async function startServer() {
           };
         }
       } else if (p.id === 'aer-18') {
-        const targetImg = '/stand.svg';
+        const targetImg = '/stand.jpg';
         if (p.image !== targetImg) {
           dirty = true;
           updatedProd = {
@@ -213,17 +213,20 @@ async function startServer() {
         }
       }
 
-      // General fallback check for old Unsplash & Naver images
+      // General fallback check for old Unsplash, Naver & SVG placeholder images
       const staleAer18Img = 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&q=80&w=400';
       const staleWallImg = 'https://images.unsplash.com/photo-1585338111222-d48d7169f96f?auto=format&fit=crop&q=80&w=400';
       const naverAer18Img = 'https://shopping-phinf.pstatic.net/main_27072973163/27072973163.20210515152345.jpg';
       const naverWallImg = 'https://shopping-phinf.pstatic.net/main_26744820525/26744820525.20210411162351.jpg';
-      if (updatedProd.image === staleAer18Img || updatedProd.image === naverAer18Img) {
+      const svgStandImg = '/stand.svg';
+      const svgWallImg = '/wall.svg';
+
+      if (updatedProd.image === staleAer18Img || updatedProd.image === naverAer18Img || updatedProd.image === svgStandImg) {
         dirty = true;
-        updatedProd.image = '/stand.svg';
-      } else if (updatedProd.image === staleWallImg || updatedProd.image === naverWallImg) {
+        updatedProd.image = '/stand.jpg';
+      } else if (updatedProd.image === staleWallImg || updatedProd.image === naverWallImg || updatedProd.image === svgWallImg) {
         dirty = true;
-        updatedProd.image = '/wall.svg';
+        updatedProd.image = '/wall.jpg';
       }
 
       finalProducts.push(updatedProd);
