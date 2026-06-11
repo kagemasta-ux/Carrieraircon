@@ -56,7 +56,7 @@ const CARRIER_PRODUCTS: Product[] = [
     name: '캐리어 에어로 18단 프리미엄 에어컨',
     model: 'KCD18-S33B',
     category: 'residential',
-    image: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&q=80&w=400',
+    image: 'https://shopping-phinf.pstatic.net/main_27072973163/27072973163.20210515152345.jpg',
     area: '58.5㎡ (18평형)',
     efficiency: '1등급',
     features: ['18단계 맞춤 청정 위속바람', 'AI 스마트 자동 최적 냉방', 'UV-C LED 살균 청정 내부 필터'],
@@ -68,7 +68,7 @@ const CARRIER_PRODUCTS: Product[] = [
     name: '캐리어 클라윈드 초절전 벽걸이형',
     model: 'CSV-A061KL',
     category: 'residential',
-    image: 'https://images.unsplash.com/photo-1585338111222-d48d7169f96f?auto=format&fit=crop&q=80&w=400',
+    image: 'https://shopping-phinf.pstatic.net/main_26744820525/26744820525.20210411162351.jpg',
     area: '18.7㎡ (6평형)',
     efficiency: '3등급',
     features: ['셀프 클리닝 자동 건조 시스템', '초절전 인버터 기술 탑재', '저소음 수면모드 및 습도조절'],
@@ -76,14 +76,14 @@ const CARRIER_PRODUCTS: Product[] = [
   },
   {
     id: 'sys-34',
-    name: '캐리어 Cassette 4way 천장형 인버터',
-    model: 'KCV-A151MC',
-    category: 'system',
-    image: 'https://images.unsplash.com/photo-1545259741-2ea3ebf61fa3?auto=format&fit=crop&q=80&w=400',
-    area: '49.0㎡ (15평형)',
+    name: '캐리어 벽걸이 에어컨',
+    model: 'CSV-A061KL',
+    category: 'residential',
+    image: 'https://shopping-phinf.pstatic.net/main_26744820525/26744820525.20210411162351.jpg',
+    area: '18.7㎡ (6평형)',
     efficiency: '1등급',
-    features: ['3D 입체 간접 기류제어 사각지대 제로', '컴팩트 경량화 판넬 시공', '고양정 자동 배수 펌프'],
-    specs: { cooling: '6.0 kW', heating: '7.2 kW', power: '1.8 kW' },
+    features: ['셀프 클리닝 자동 건조 시스템', '초절전 인버터 기술 탑재', '저소음 수면모드 및 자동 위생 케어'],
+    specs: { cooling: '2.3 kW', power: '0.65 kW' },
     isPopular: true
   },
   {
@@ -1092,9 +1092,10 @@ export default function App() {
                       </div>
                       <div className="p-5 flex-grow flex flex-col justify-between space-y-4">
                         <div className="space-y-1.5">
-                          <span className="text-[10px] font-bold text-rose-500 uppercase">{p.category === 'system' ? '천장형 시스템' : '스탠드 가정용'}</span>
+                          <span className="text-[10px] font-bold text-rose-500 uppercase">
+                            {p.category === 'system' ? '천장형 시스템' : p.category === 'commercial' ? '상업용 대형' : p.name.includes('벽걸이') ? '가정용 벽걸이' : '가정용 스탠드'}
+                          </span>
                           <h3 className="font-bold text-slate-900 text-base">{p.name}</h3>
-                          <span className="text-slate-500 text-xs font-semibold">모델명 : {p.model}</span>
                           <div className="pt-2 flex flex-wrap gap-1">
                             <span className="text-[11px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded">효율: {p.efficiency}</span>
                             <span className="text-[11px] bg-sky-50 text-[#002D62] px-2 py-0.5 rounded">적용 면적: {p.area}</span>

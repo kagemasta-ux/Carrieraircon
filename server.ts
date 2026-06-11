@@ -40,7 +40,7 @@ async function startServer() {
         name: '캐리어 에어로 18단 프리미엄 에어컨',
         model: 'KCD18-S33B',
         category: 'residential',
-        image: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&q=80&w=400',
+        image: 'https://shopping-phinf.pstatic.net/main_27072973163/27072973163.20210515152345.jpg',
         area: '58.5㎡ (18평형)',
         efficiency: '1등급',
         features: ['18단계 맞춤 청정 위속바람', 'AI 스마트 자동 최적 냉방', 'UV-C LED 살균 청정 내부 필터'],
@@ -52,7 +52,7 @@ async function startServer() {
         name: '캐리어 클라윈드 초절전 벽걸이형',
         model: 'CSV-A061KL',
         category: 'residential',
-        image: 'https://images.unsplash.com/photo-1585338111222-d48d7169f96f?auto=format&fit=crop&q=80&w=400',
+        image: 'https://shopping-phinf.pstatic.net/main_26744820525/26744820525.20210411162351.jpg',
         area: '18.7㎡ (6평형)',
         efficiency: '3등급',
         features: ['셀프 클리닝 자동 건조 시스템', '초절전 인버터 기술 탑재', '저소음 수면모드 및 습도조절'],
@@ -60,14 +60,14 @@ async function startServer() {
       },
       {
         id: 'sys-34',
-        name: '캐리어 Cassette 4way 천장형 인버터',
-        model: 'KCV-A151MC',
-        category: 'system',
-        image: 'https://images.unsplash.com/photo-1545259741-2ea3ebf61fa3?auto=format&fit=crop&q=80&w=400',
-        area: '49.0㎡ (15평형)',
+        name: '캐리어 벽걸이 에어컨',
+        model: 'CSV-A061KL',
+        category: 'residential',
+        image: 'https://shopping-phinf.pstatic.net/main_26744820525/26744820525.20210411162351.jpg',
+        area: '18.7㎡ (6평형)',
         efficiency: '1등급',
-        features: ['3D 입체 간접 기류제어 사각지대 제로', '컴팩트 경량화 판넬 시공', '고양정 자동 배수 펌프'],
-        specs: { cooling: '6.0 kW', heating: '7.2 kW', power: '1.8 kW' },
+        features: ['셀프 클리닝 자동 건조 시스템', '초절전 인버터 기술 탑재', '저소음 수면모드 및 자동 위생 케어'],
+        specs: { cooling: '2.3 kW', power: '0.65 kW' },
         isPopular: true
       },
       {
@@ -130,15 +130,95 @@ async function startServer() {
   }
 
   async function readProducts(): Promise<any[]> {
+    let products: any[] = [];
     if (firestoreService.isAvailable()) {
-      return await firestoreService.getProducts();
+      try {
+        products = await firestoreService.getProducts();
+      } catch (err) {
+        console.error('Failed to read products from Firestore:', err);
+      }
     }
-    try {
-      const data = fs.readFileSync(productsPath, 'utf-8');
-      return JSON.parse(data);
-    } catch {
-      return [];
+    
+    if (!products || products.length === 0) {
+      try {
+        const data = fs.readFileSync(productsPath, 'utf-8');
+        products = JSON.parse(data);
+      } catch {
+        products = [];
+      }
     }
+
+    // Server-side Migration for stale product data (sys-34 name/image, clar-06 image and aer-18 image)
+    let dirty = false;
+    const migratedProducts = products.map((p: any) => {
+      if (p.id === 'sys-34') {
+        const targetName = '캐리어 벽걸이 에어컨';
+        const targetModel = 'CSV-A061KL';
+        const targetCategory = 'residential';
+        const targetImg = 'https://shopping-phinf.pstatic.net/main_26744820525/26744820525.20210411162351.jpg';
+        const targetArea = '18.7㎡ (6평형)';
+        if (p.name !== targetName || p.model !== targetModel || p.category !== targetCategory || p.image !== targetImg || p.area !== targetArea) {
+          dirty = true;
+          return {
+            ...p,
+            name: targetName,
+            model: targetModel,
+            category: targetCategory,
+            image: targetImg,
+            area: targetArea,
+            efficiency: '1등급',
+            features: [
+              '셀프 클리닝 자동 건조 시스템',
+              '초절전 인버터 기술 탑재',
+              '저소음 수면모드 및 자동 위생 케어'
+            ],
+            specs: { cooling: '2.3 kW', power: '0.65 kW' },
+            isPopular: true
+          };
+        }
+      } else if (p.id === 'clar-06') {
+        const targetImg = 'https://shopping-phinf.pstatic.net/main_26744820525/26744820525.20210411162351.jpg';
+        if (p.image !== targetImg) {
+          dirty = true;
+          return {
+            ...p,
+            image: targetImg
+          };
+        }
+      } else if (p.id === 'aer-18') {
+        const targetImg = 'https://shopping-phinf.pstatic.net/main_27072973163/27072973163.20210515152345.jpg';
+        if (p.image !== targetImg) {
+          dirty = true;
+          return {
+            ...p,
+            image: targetImg
+          };
+        }
+      }
+      return p;
+    });
+
+    if (dirty) {
+      console.log('Migrating stale products inside Firestore or local file...');
+      if (firestoreService.isAvailable()) {
+        for (const p of migratedProducts) {
+          const { id, ...payload } = p;
+          try {
+            await firestoreService.saveProduct(id, payload);
+          } catch (err) {
+            console.error(`Failed to save migrated product ${id}:`, err);
+          }
+        }
+      }
+      try {
+        fs.writeFileSync(productsPath, JSON.stringify(migratedProducts, null, 2));
+      } catch (e) {
+        console.error('Failed to write migrated products to local file:', e);
+      }
+      products = migratedProducts;
+    }
+
+    return products;
   }
 
   async function writeProducts(products: any[]) {
