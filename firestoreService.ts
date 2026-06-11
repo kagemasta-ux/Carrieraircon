@@ -109,6 +109,31 @@ export const firestoreService = {
     }
   },
 
+  async getKakaoAppKey(defaultKey: string = ''): Promise<string> {
+    if (!this.isAvailable()) return defaultKey;
+    try {
+      const docRef = doc(db, 'admin', 'settings');
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        return data.kakaoAppKey || defaultKey;
+      }
+      return defaultKey;
+    } catch (err) {
+      handleFirestoreError(err, OperationType.GET, 'admin/settings');
+    }
+  },
+
+  async setKakaoAppKey(appKey: string): Promise<void> {
+    if (!this.isAvailable()) return;
+    try {
+      const docRef = doc(db, 'admin', 'settings');
+      await setDoc(docRef, { kakaoAppKey: appKey }, { merge: true });
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, 'admin/settings');
+    }
+  },
+
   async getPosts(): Promise<any[]> {
     if (!this.isAvailable()) return [];
     try {

@@ -148,6 +148,50 @@ export default function App() {
   const [adminNewPassword, setAdminNewPassword] = useState('');
   const [adminPasswordStatus, setAdminPasswordStatus] = useState({ success: false, message: '' });
 
+  const [adminKakaoKey, setAdminKakaoKey] = useState('');
+  const [adminKakaoStatus, setAdminKakaoStatus] = useState({ success: false, message: '' });
+
+  const fetchAdminKakaoKey = async () => {
+    if (!adminToken) return;
+    try {
+      const res = await fetch('/api/admin/config/kakao', {
+        headers: {
+          'X-Admin-Token': adminToken || ''
+        }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAdminKakaoKey(data.appKey || '');
+      }
+    } catch (err) {
+      console.error('Failed to fetch admin Kakao Key config:', err);
+    }
+  };
+
+  const handleAdminSaveKakaoKey = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAdminKakaoStatus({ success: false, message: '' });
+    if (!adminToken) return;
+    try {
+      const res = await fetch('/api/admin/config/kakao', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Token': adminToken || ''
+        },
+        body: JSON.stringify({ appKey: adminKakaoKey.trim() })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAdminKakaoStatus({ success: true, message: '카카오맵 API 앱 키가 성공적으로 저장되었습니다!' });
+      } else {
+        setAdminKakaoStatus({ success: false, message: data.message || '저장 실패' });
+      }
+    } catch {
+      setAdminKakaoStatus({ success: false, message: '서버와 연결할 수 없습니다.' });
+    }
+  };
+
   const handleAdminChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setAdminPasswordStatus({ success: false, message: '' });
@@ -383,6 +427,9 @@ export default function App() {
   useEffect(() => {
     fetchPosts();
     fetchProducts();
+    if (adminToken) {
+      fetchAdminKakaoKey();
+    }
   }, [adminToken]);
 
   const fetchProducts = async () => {
@@ -2353,47 +2400,95 @@ export default function App() {
 
               {/* SUB TAB: ADMIN CREDENTIALS ACCOUNT */}
               {adminSubTab === 'account' && (
-                <div className="bg-white p-6 rounded-xl border border-slate-200 space-y-6 animate-fade-in text-left max-w-xl mx-auto">
-                  <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-                    <Shield className="w-5 h-5 text-[#002D62]" />
-                    <div>
-                      <h3 className="text-sm font-bold text-[#002D62] uppercase tracking-wide">관리자 전산 통제용 패스코드 변경</h3>
-                      <p className="text-slate-400 text-[11px]">관제 화면 접근 및 비인정 회원의 임의 게시글 삭제, 답변 관리를 전면 조율할 때 인증하는 암호를 갱신합니다.</p>
+                <div className="space-y-6 max-w-xl mx-auto">
+                  <div className="bg-white p-6 rounded-xl border border-slate-200 space-y-6 animate-fade-in text-left">
+                    <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+                      <Shield className="w-5 h-5 text-[#002D62]" />
+                      <div>
+                        <h3 className="text-sm font-bold text-[#002D62] uppercase tracking-wide">관리자 전산 통제용 패스코드 변경</h3>
+                        <p className="text-slate-400 text-[11px]">관제 화면 접근 및 비인정 회원의 임의 게시글 삭제, 답변 관리를 전면 조율할 때 인증하는 암호를 갱신합니다.</p>
+                      </div>
                     </div>
+
+                    <form onSubmit={handleAdminChangePassword} className="space-y-4">
+                      <div className="space-y-1.5">
+                        <label className="block text-slate-500 font-bold text-xs">신규 관리자 접속 패스코드 설정</label>
+                        <input
+                          type="password"
+                          value={adminNewPassword}
+                          onChange={(e) => setAdminNewPassword(e.target.value)}
+                          placeholder="새 비밀번호 입력 (4글자 이상)"
+                          className="w-full border border-slate-300 rounded-lg p-2.5 text-xs text-[#002D62] font-semibold"
+                          required
+                        />
+                      </div>
+
+                      {adminPasswordStatus.message && (
+                        <div className={`p-3 rounded-lg text-xs leading-relaxed font-semibold border ${
+                          adminPasswordStatus.success
+                            ? 'bg-emerald-50 border-emerald-100 text-emerald-700'
+                            : 'bg-rose-50 border-rose-100 text-rose-700'
+                        }`}>
+                          {adminPasswordStatus.message}
+                        </div>
+                      )}
+
+                      <div className="flex justify-end pt-1">
+                        <button
+                          type="submit"
+                          className="py-2.5 px-6 bg-[#002D62] hover:bg-[#002D62]/90 text-white font-bold text-xs rounded-lg transition-colors cursor-pointer"
+                        >
+                          암호 통제코드 업데이트
+                        </button>
+                      </div>
+                    </form>
                   </div>
 
-                  <form onSubmit={handleAdminChangePassword} className="space-y-4">
-                    <div className="space-y-1.5">
-                      <label className="block text-slate-500 font-bold text-xs">신규 관리자 접속 패스코드 설정</label>
-                      <input
-                        type="password"
-                        value={adminNewPassword}
-                        onChange={(e) => setAdminNewPassword(e.target.value)}
-                        placeholder="새 비밀번호 입력 (4글자 이상)"
-                        className="w-full border border-slate-300 rounded-lg p-2.5 text-xs text-[#002D62] font-semibold"
-                        required
-                      />
-                    </div>
-
-                    {adminPasswordStatus.message && (
-                      <div className={`p-3 rounded-lg text-xs leading-relaxed font-semibold border ${
-                        adminPasswordStatus.success
-                          ? 'bg-emerald-50 border-emerald-100 text-emerald-700'
-                          : 'bg-rose-50 border-rose-100 text-rose-700'
-                      }`}>
-                        {adminPasswordStatus.message}
+                  <div className="bg-white p-6 rounded-xl border border-slate-200 space-y-6 animate-fade-in text-left">
+                    <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+                      <MapPin className="w-5 h-5 text-sky-600" />
+                      <div>
+                        <h3 className="text-sm font-bold text-[#002D62] uppercase tracking-wide">외부 서비스 연동 설정 - 카카오맵 API 앱 키</h3>
+                        <p className="text-slate-400 text-[11px]">오시는 길 화면에 실시간 동적 카카오맵을 적용하기 위해 발급받은 <strong>JavaScript 앱 키</strong>를 입력합니다. 이 키는 Firestore 데이터베이스에 완전 안전하게 연동 및 보존됩니다.</p>
                       </div>
-                    )}
-
-                    <div className="flex justify-end pt-1">
-                      <button
-                        type="submit"
-                        className="py-2.5 px-6 bg-[#002D62] hover:bg-[#002D62]/90 text-white font-bold text-xs rounded-lg transition-colors cursor-pointer"
-                      >
-                        암호 통제코드 업데이트
-                      </button>
                     </div>
-                  </form>
+
+                    <form onSubmit={handleAdminSaveKakaoKey} className="space-y-4">
+                      <div className="space-y-1.5">
+                        <label className="block text-slate-500 font-bold text-xs">카카오맵 JavaScript 앱 키 입력 (32자리 영문/숫자 복사값)</label>
+                        <input
+                          type="text"
+                          value={adminKakaoKey}
+                          onChange={(e) => setAdminKakaoKey(e.target.value)}
+                          placeholder="예: 42ad8e398... (무공백 복사값)"
+                          className="w-full border border-slate-300 rounded-lg p-2.5 text-xs text-[#002D62] font-semibold"
+                          required
+                        />
+                        <span className="block text-slate-400 text-[10.5px]">
+                          * 카카오 개발자 콘솔에서 발급받은 'JavaScript 키'를 입력하신 뒤 저장해 주세요. 저장되면 '오시는 길' 페이지에 위치 지도가 실시간으로 출력됩니다.
+                        </span>
+                      </div>
+
+                      {adminKakaoStatus.message && (
+                        <div className={`p-3 rounded-lg text-xs leading-relaxed font-semibold border ${
+                          adminKakaoStatus.success
+                            ? 'bg-emerald-50 border-emerald-100 text-emerald-700'
+                            : 'bg-rose-50 border-rose-100 text-rose-700'
+                        }`}>
+                          {adminKakaoStatus.message}
+                        </div>
+                      )}
+
+                      <div className="flex justify-end pt-1">
+                        <button
+                          type="submit"
+                          className="py-2.5 px-6 bg-[#002D62] hover:bg-[#002D62]/90 text-white font-bold text-xs rounded-lg transition-colors cursor-pointer"
+                        >
+                          카카오 API 키 저장하기
+                        </button>
+                      </div>
+                    </form>
+                  </div>
                 </div>
               )}
 

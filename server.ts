@@ -233,7 +233,29 @@ async function startServer() {
 
   // 0. GET /api/config/kakao - Return dynamic Kakao Map App Key for runtime client loading
   app.get('/api/config/kakao', asyncHandler(async (req, res) => {
-    const key = process.env.VITE_KAKAO_APP_KEY || process.env.KAKAO_APP_KEY || '';
+    let key = process.env.VITE_KAKAO_APP_KEY || process.env.KAKAO_APP_KEY || '';
+    
+    // Check local admin.json as backup if env not set
+    if (!key) {
+      try {
+        if (fs.existsSync(adminCredsPath)) {
+          const localAdmin = JSON.parse(fs.readFileSync(adminCredsPath, 'utf-8'));
+          key = localAdmin.kakaoAppKey || '';
+        }
+      } catch (e) {
+        console.warn('Could not read kakaoAppKey from local admin.json:', e);
+      }
+    }
+
+    // Check Firestore admin/settings as best durable fallback
+    if (!key && firestoreService.isAvailable()) {
+      try {
+        key = await firestoreService.getKakaoAppKey(key);
+      } catch (err) {
+        console.warn('Could not read kakaoAppKey from Firestore:', err);
+      }
+    }
+
     res.json({ success: true, appKey: key });
   }));
 
@@ -426,6 +448,59 @@ ${content}
     }
     await setAdminPassword(password.trim());
     res.json({ success: true, message: '비밀번호가 성공적으로 변경되었습니다.' });
+  }));
+
+  // 4.2 GET /api/admin/config/kakao - Get Kakao Map App Key (Admin only)
+  app.get('/api/admin/config/kakao', asyncHandler(async (req, res) => {
+    const isAdmin = getAdminStatus(req);
+    if (!isAdmin) {
+      return res.status(401).json({ success: false, message: '관리자 권한이 필요합니다.' });
+    }
+    
+    let key = process.env.VITE_KAKAO_APP_KEY || process.env.KAKAO_APP_KEY || '';
+    if (fs.existsSync(adminCredsPath)) {
+      try {
+        const localAdmin = JSON.parse(fs.readFileSync(adminCredsPath, 'utf-8'));
+        key = localAdmin.kakaoAppKey || key;
+      } catch (e) {}
+    }
+    if (firestoreService.isAvailable()) {
+      try {
+        key = await firestoreService.getKakaoAppKey(key);
+      } catch (err) {}
+    }
+    res.json({ success: true, appKey: key });
+  }));
+
+  // 4.3 POST /api/admin/config/kakao - Update Kakao Map App Key (Admin only)
+  app.post('/api/admin/config/kakao', asyncHandler(async (req, res) => {
+    const isAdmin = getAdminStatus(req);
+    if (!isAdmin) {
+      return res.status(401).json({ success: false, message: '관리자 권한이 필요합니다.' });
+    }
+    const { appKey } = req.body;
+    
+    // Save to Firestore settings
+    if (firestoreService.isAvailable()) {
+      try {
+        await firestoreService.setKakaoAppKey(appKey || '');
+      } catch (err) {
+        console.error('Failed to write kakaoAppKey to Firestore:', err);
+      }
+    }
+
+    // Save to local admin.json config backup
+    try {
+      let localData: any = {};
+      if (fs.existsSync(adminCredsPath)) {
+        localData = JSON.parse(fs.readFileSync(adminCredsPath, 'utf-8'));
+      }
+      fs.writeFileSync(adminCredsPath, JSON.stringify({ ...localData, kakaoAppKey: appKey || '' }, null, 2));
+    } catch (e) {
+      console.error('Failed to save to local admin.json config:', e);
+    }
+
+    res.json({ success: true, message: '카카오맵 API 앱 키가 성공적으로 업데이트되었습니다.' });
   }));
 
   // 5. GET /api/admin/check - Verify Admin session
