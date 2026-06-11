@@ -4,8 +4,8 @@ import React, { useEffect, useRef, useState } from 'react';
 // 📍 캐리어에어컨 성남총판 (성남대로 1247 / 태평역 6번 출구 바로 앞) 정밀 좌표 설정
 // 지도의 핀과 중심 위치를 더욱 정교하게 미세조정하려면 아래 위도/경도를 수정하세요.
 // =========================================================================
-export const MAIN_STORE_LATITUDE = 37.440432;   // 태평역 6번 출구 바로 앞 건물 실좌표 위도 (성남대로 1247)
-export const MAIN_STORE_LONGITUDE = 127.127341; // 태평역 6번 출구 바로 앞 건물 실좌표 경도 (수진동 2981-1)
+export const MAIN_STORE_LATITUDE = 33.450701;   // 지도의 핀과 중심 위치 위도
+export const MAIN_STORE_LONGITUDE = 126.570667; // 지도의 핀과 중심 위치 경도
 
 declare global {
   interface Window {
@@ -80,8 +80,8 @@ export function KakaoMap() {
     if (!script) {
       script = document.createElement('script');
       script.id = scriptId;
-      // Note the &autoload=false parameter is essential for lazy initialization inside React
-      script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${appKey}&autoload=false`;
+      // Note the &libraries=services and &autoload=false parameters are essential
+      script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${appKey}&libraries=services&autoload=false`;
       script.async = true;
       script.onload = () => {
         if (window.kakao && window.kakao.maps) {
@@ -114,7 +114,7 @@ export function KakaoMap() {
     if (!isLoaded || !mapRef.current || !window.kakao || !window.kakao.maps) return;
 
     try {
-      // 상단의 정정된 정밀 좌표 상수를 적용합니다.
+      // 기본값 설정 (수정구가 있는 태평역 인근 좌표)
       const markerPosition = new window.kakao.maps.LatLng(MAIN_STORE_LATITUDE, MAIN_STORE_LONGITUDE);
       
       const mapOptions = {
@@ -161,6 +161,22 @@ export function KakaoMap() {
       window.kakao.maps.event.addListener(marker, 'click', () => {
         infowindow.open(map, marker);
       });
+
+      // 📍 카카오맵 주소 검색 서비스(Geocoder) 적용
+      if (window.kakao.maps.services && window.kakao.maps.services.Geocoder) {
+        const geocoder = new window.kakao.maps.services.Geocoder();
+        geocoder.addressSearch('성남대로 1247', function (result: any[], status: any) {
+          if (status === window.kakao.maps.services.Status.OK) {
+            const coords = new window.kakao.maps.LatLng(result[0].y, result[0].x);
+            // 마커 위치 업데이트
+            marker.setPosition(coords);
+            // 지도 중심 이동
+            map.setCenter(coords);
+            // 인포윈도우도 해당 위치에 다시 열기
+            infowindow.open(map, marker);
+          }
+        });
+      }
 
     } catch (err) {
       console.error("Failed to initialize Kakao Map:", err);
