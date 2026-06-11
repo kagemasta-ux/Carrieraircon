@@ -1279,7 +1279,7 @@ export default function App() {
                 onClick={() => { setSubmitSuccess(null); setIsWriteModalOpen(true); }}
                 className="px-5 py-2.5 bg-gradient-to-r from-sky-500 to-sky-600 hover:opacity-95 text-white font-bold rounded-lg shadow-sm font-semibold transition-all flex items-center justify-center gap-2 text-sm cursor-pointer"
               >
-                <Plus className="w-4 h-4" /> 새로운 비밀 문의 등록
+                <Plus className="w-4 h-4" /> 문의 등록
               </button>
             </div>
 
