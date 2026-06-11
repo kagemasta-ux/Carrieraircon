@@ -1087,7 +1087,15 @@ export default function App() {
                   {products.filter(p => p.isPopular).map(p => (
                     <div key={p.id} className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs hover:shadow-md transition-shadow flex flex-col">
                       <div className="relative h-48 bg-slate-100 overflow-hidden">
-                        <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
+                        <img 
+                          src={p.image} 
+                          alt={p.name} 
+                          className="w-full h-full object-cover" 
+                          referrerPolicy="no-referrer"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&q=80&w=400';
+                          }}
+                        />
                         <span className="absolute top-3 left-3 bg-[#002D62] text-white text-xs px-2.5 py-1 rounded-full font-bold">인기 기종</span>
                       </div>
                       <div className="p-5 flex-grow flex flex-col justify-between space-y-4">
@@ -1159,7 +1167,15 @@ export default function App() {
                 <div key={p.id} className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
                   <div>
                     <div className="relative h-56 bg-slate-100 overflow-hidden">
-                      <img src={p.image} alt={p.name} className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
+                      <img 
+                        src={p.image} 
+                        alt={p.name} 
+                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" 
+                        referrerPolicy="no-referrer"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&q=80&w=400';
+                        }}
+                      />
                       <span className="absolute top-3 left-3 bg-[#0F3F7A] text-white text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider">
                         {p.category === 'residential' ? '가정용' : p.category === 'commercial' ? '고용량 상업용' : '시스템/멀티'}
                       </span>
@@ -2460,7 +2476,15 @@ export default function App() {
                           products.map((p) => (
                             <tr key={p.id} className="hover:bg-slate-50">
                               <td className="py-2 px-4 text-center">
-                                <img src={p.image} alt="" className="w-10 h-10 object-cover rounded-lg border border-slate-200 mx-auto" referrerPolicy="no-referrer" />
+                                <img 
+                                  src={p.image} 
+                                  alt="" 
+                                  className="w-10 h-10 object-cover rounded-lg border border-slate-200 mx-auto" 
+                                  referrerPolicy="no-referrer"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&q=80&w=400';
+                                  }}
+                                />
                               </td>
                               <td className="py-2 px-4 font-bold text-slate-800">{p.name}</td>
                               <td className="py-2 px-4 font-mono font-semibold text-slate-600">{p.model}</td>

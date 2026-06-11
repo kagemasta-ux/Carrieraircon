@@ -150,7 +150,24 @@ async function startServer() {
 
     // Server-side Migration for stale product data (sys-34 name/image, clar-06 image and aer-18 image)
     let dirty = false;
-    const migratedProducts = products.map((p: any) => {
+    const finalProducts: any[] = [];
+    for (const p of products) {
+      if (p.model === 'KCV-A151MC' || (p.name && p.name.includes('Cassette'))) {
+        dirty = true;
+        if (firestoreService.isAvailable() && p.id) {
+          try {
+            console.log(`Deleting stale cassette product ${p.id} from Firestore...`);
+            await firestoreService.deleteProduct(p.id);
+          } catch (e) {
+            console.error('Failed to delete stale cassette product:', e);
+          }
+        }
+        continue; // skip sending or keeping this stale product
+      }
+
+      let updatedProd = { ...p };
+
+      // Migrate sys-34 details
       if (p.id === 'sys-34') {
         const targetName = '캐리어 벽걸이 에어컨';
         const targetModel = 'CSV-A061KL';
@@ -159,7 +176,7 @@ async function startServer() {
         const targetArea = '18.7㎡ (6평형)';
         if (p.name !== targetName || p.model !== targetModel || p.category !== targetCategory || p.image !== targetImg || p.area !== targetArea) {
           dirty = true;
-          return {
+          updatedProd = {
             ...p,
             name: targetName,
             model: targetModel,
@@ -180,7 +197,7 @@ async function startServer() {
         const targetImg = 'https://shopping-phinf.pstatic.net/main_26744820525/26744820525.20210411162351.jpg';
         if (p.image !== targetImg) {
           dirty = true;
-          return {
+          updatedProd = {
             ...p,
             image: targetImg
           };
@@ -189,19 +206,31 @@ async function startServer() {
         const targetImg = 'https://shopping-phinf.pstatic.net/main_27072973163/27072973163.20210515152345.jpg';
         if (p.image !== targetImg) {
           dirty = true;
-          return {
+          updatedProd = {
             ...p,
             image: targetImg
           };
         }
       }
-      return p;
-    });
+
+      // General fallback check for old Unsplash images
+      const staleAer18Img = 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&q=80&w=400';
+      const staleWallImg = 'https://images.unsplash.com/photo-1585338111222-d48d7169f96f?auto=format&fit=crop&q=80&w=400';
+      if (updatedProd.image === staleAer18Img) {
+        dirty = true;
+        updatedProd.image = 'https://shopping-phinf.pstatic.net/main_27072973163/27072973163.20210515152345.jpg';
+      } else if (updatedProd.image === staleWallImg) {
+        dirty = true;
+        updatedProd.image = 'https://shopping-phinf.pstatic.net/main_26744820525/26744820525.20210411162351.jpg';
+      }
+
+      finalProducts.push(updatedProd);
+    }
 
     if (dirty) {
       console.log('Migrating stale products inside Firestore or local file...');
       if (firestoreService.isAvailable()) {
-        for (const p of migratedProducts) {
+        for (const p of finalProducts) {
           const { id, ...payload } = p;
           try {
             await firestoreService.saveProduct(id, payload);
@@ -211,11 +240,11 @@ async function startServer() {
         }
       }
       try {
-        fs.writeFileSync(productsPath, JSON.stringify(migratedProducts, null, 2));
+        fs.writeFileSync(productsPath, JSON.stringify(finalProducts, null, 2));
       } catch (e) {
         console.error('Failed to write migrated products to local file:', e);
       }
-      products = migratedProducts;
+      products = finalProducts;
     }
 
     return products;
