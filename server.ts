@@ -591,8 +591,12 @@ ${content}
           }
         });
 
+        const senderDisplayName = `${author} (${email || '이메일미기재'})`;
+        const dynamicSmtpFrom = smtpUser ? `"${senderDisplayName}" <${smtpUser}>` : smtpFrom;
+
         await transporter.sendMail({
-          from: smtpFrom,
+          from: dynamicSmtpFrom,
+          replyTo: email || undefined,
           to: notificationReceiver,
           subject: emailSubject,
           text: emailBodyText,
@@ -815,6 +819,104 @@ ${content}
       }
     }
     await writePosts(posts);
+
+    // E-mail notification trigger for answers to inquiry
+    let emailStatus = '';
+    let isReplyMock = true;
+
+    if (content && post.email && post.email.trim()) {
+      try {
+        const siteSettings = await readSiteSettings();
+        const smtpHost = process.env.SMTP_HOST || siteSettings.smtpHost || '';
+        const smtpUser = process.env.SMTP_USER || siteSettings.smtpUser || '';
+        const smtpPass = process.env.SMTP_PASS || siteSettings.smtpPass || '';
+        const smtpPort = parseInt(process.env.SMTP_PORT || siteSettings.smtpPort || '587');
+        const smtpSecure = (process.env.SMTP_SECURE || siteSettings.smtpSecure) === 'true';
+        const smtpFrom = process.env.SMTP_FROM || siteSettings.smtpFrom || (smtpUser ? `"Carrier AC Website" <${smtpUser}>` : '');
+        const receiverEmail = post.email.trim();
+
+        const replySubject = `[캐리어에어컨 성남총판] 문의하신 내용에 대한 답변이 등록되었습니다.`;
+        const replyBodyText = `
+안녕하세요, ${post.author} 고객님.
+캐리어에어컨 성남총판 홈페이지의 비회원 안심 전산망을 통해 연락처 매칭으로 등록하신 문의사항에 대해 답변이 완료되어 안내드립니다.
+
+■ 문의 분류: ${post.category === 'quote' ? '견적 요청' : '일반 문의'}
+■ 문의 제목: ${post.title}
+■ 답변 등록일: ${new Date().toLocaleDateString('ko-KR')}
+
+==================================================
+[등록된 답변 내용]
+
+${content}
+
+==================================================
+
+■ 작성하신 원래 문의 내용:
+${post.content || '내용 없음'}
+
+--------------------------------------------------
+※ 본 메일은 시스템 자동 발송 전용 메일입니다.
+답변에 관한 추가 문의 또는 사양 견적 상세 조율이 필요하신 경우 대표번호(1588-6883) 또는 대표이메일(${siteSettings.footerEmail || '01carrier@hanmail.net'})로 연락 주시면 성심껏 안내를 도와드리겠습니다.
+
+전국 최우수 파트너 캐리어에어컨 성남총판을 이용해 주셔서 감사드립니다.
+`;
+
+        if (smtpHost && smtpUser && smtpPass) {
+          try {
+            const transporter = nodemailer.createTransport({
+              host: smtpHost,
+              port: smtpPort,
+              secure: smtpSecure,
+              auth: {
+                user: smtpUser,
+                pass: smtpPass
+              }
+            });
+
+            await transporter.sendMail({
+              from: smtpFrom,
+              to: receiverEmail,
+              subject: replySubject,
+              text: replyBodyText,
+            });
+
+            emailStatus = `답변 전송 성공 (발송인: ${smtpUser} -> 고객 수신처: ${receiverEmail})`;
+            isReplyMock = false;
+          } catch (err: any) {
+            emailStatus = `답변 SMTP 발송 실패 (${err.message})`;
+            isReplyMock = false;
+          }
+        } else {
+          emailStatus = `답변 모의 발송 (이메일 설정 미완료, 발송 내역 시뮬레이션). 수신처: ${receiverEmail}`;
+          isReplyMock = true;
+          console.log(`\n=== [SMTP ALARM CONSOLE LOG - REPLY] ===\nSubject: ${replySubject}\nTo: ${receiverEmail}\nBody:\n${replyBodyText}\n=== [SMTP REPLY ALARM END] ===\n`);
+        }
+
+        // Write to email log system (json or firestore)
+        const newEmailLog = {
+          id: `email_${Date.now()}`,
+          category: 'reply',
+          title: `[답변 발송] ${post.title}`,
+          author: '관리자',
+          receiver: receiverEmail,
+          status: emailStatus,
+          isMock: isReplyMock,
+          timestamp: new Date().toISOString()
+        };
+
+        if (firestoreService.isAvailable()) {
+          await firestoreService.saveEmail(newEmailLog.id, newEmailLog);
+        }
+        const emailsList = await readEmails();
+        if (!firestoreService.isAvailable()) {
+          emailsList.unshift(newEmailLog);
+        }
+        await writeEmails(emailsList);
+      } catch (err) {
+        console.error('Failed to trigger response email:', err);
+      }
+    }
+
     res.json({ success: true, post });
   }));
 
